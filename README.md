@@ -37,19 +37,6 @@ Play 版本)。
 bash <(curl -s https://raw.githubusercontent.com/mc10091009/st_manager.sh/refs/heads/main/st_manager.sh)
 ```
 
-**或者手动下载运行:**
-
-```bash
-# 下载脚本
-curl -O https://raw.githubusercontent.com/你的用户名/你的仓库名/main/st_manager.sh
-
-# 赋予执行权限
-chmod +x st_manager.sh
-
-# 运行脚本
-./st_manager.sh
-```
-
 ## 菜单说明
 
 运行脚本后，你将看到以下菜单：
