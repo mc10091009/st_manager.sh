@@ -251,7 +251,8 @@ function update_self() {
             mv "${SCRIPT_NAME}.tmp" "$SCRIPT_NAME"
             chmod +x "$SCRIPT_NAME"
             print_info "脚本更新成功！正在重启..."
-            exec bash "$SCRIPT_NAME"
+            # 传递参数 --skip-init 以跳过环境检查
+            exec bash "$SCRIPT_NAME" --skip-init
         else
             rm "${SCRIPT_NAME}.tmp"
             print_error "下载的文件似乎无效，取消更新。"
@@ -298,7 +299,8 @@ function main_menu() {
 }
 
 # 脚本入口
-# 脚本入口
-# 首次运行或每次运行时检查环境
-init_environment
+# 检查是否跳过环境初始化
+if [[ "$1" != "--skip-init" ]]; then
+    init_environment
+fi
 main_menu
