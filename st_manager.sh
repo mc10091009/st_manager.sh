@@ -229,19 +229,6 @@ function start_st() {
     node server.js
 }
 
-# 运行 Foxium 工具
-function run_foxium() {
-    print_info "正在启动 Foxium (酒馆多功能修复/优化/备份小工具)..."
-    print_warn "请确保已退出其他一键脚本。"
-    
-    # 下载并运行 Foxium
-    if curl -O -s https://raw.githubusercontent.com/dz114879/ST-foxium/refs/heads/main/foxium.sh; then
-        bash foxium.sh
-    else
-        print_error "下载 Foxium 失败，请检查网络连接。"
-    fi
-}
-
 # 更新脚本自身
 function update_self() {
     print_info "正在检查脚本更新..."
@@ -285,13 +272,12 @@ function main_menu() {
         echo -e "${BOLD}├── 维护工具 ───────────────────────────────────┤${NC}"
         echo -e "│  ${GREEN}4.${NC} 版本回退/切换                            │"
         echo -e "│  ${GREEN}5.${NC} 备份数据                                 │"
-        echo -e "│  ${GREEN}6.${NC} Foxium 工具箱 (来自橘狐宝宝的工具)       │"
         echo -e "${BOLD}├── 脚本设置 ───────────────────────────────────┤${NC}"
-        echo -e "│  ${GREEN}7.${NC} 更新此脚本                               │"
-        echo -e "│  ${GREEN}8.${NC} 退出                                     │"
+        echo -e "│  ${GREEN}6.${NC} 更新此脚本                               │"
+        echo -e "│  ${GREEN}7.${NC} 退出                                     │"
         echo -e "${BOLD}└───────────────────────────────────────────────┘${NC}"
         echo ""
-        read -p "请输入选项 [1-8]: " option
+        read -p "请输入选项 [1-7]: " option
         
         case $option in
             1) start_st; read -p "按回车键继续..." ;;
@@ -299,9 +285,8 @@ function main_menu() {
             3) update_st; read -p "按回车键继续..." ;;
             4) rollback_st; read -p "按回车键继续..." ;;
             5) backup_data; read -p "按回车键继续..." ;;
-            6) run_foxium; read -p "按回车键继续..." ;;
-            7) update_self; read -p "按回车键继续..." ;;
-            8) exit 0 ;;
+            6) update_self; read -p "按回车键继续..." ;;
+            7) exit 0 ;;
             *) print_error "无效选项"; read -p "按回车键继续..." ;;
         esac
     done
