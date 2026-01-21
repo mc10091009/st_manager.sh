@@ -285,7 +285,7 @@ function main_menu() {
         echo -e "${BOLD}├── 维护工具 ───────────────────────────────────┤${NC}"
         echo -e "│  ${GREEN}4.${NC} 版本回退/切换                            │"
         echo -e "│  ${GREEN}5.${NC} 备份数据                                 │"
-        echo -e "│  ${GREEN}6.${NC} Foxium 工具箱                            │"
+        echo -e "│  ${GREEN}6.${NC} Foxium 工具箱 (来自橘狐宝宝的工具)       │"
         echo -e "${BOLD}├── 脚本设置 ───────────────────────────────────┤${NC}"
         echo -e "│  ${GREEN}7.${NC} 更新此脚本                               │"
         echo -e "│  ${GREEN}8.${NC} 退出                                     │"
