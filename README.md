@@ -34,7 +34,7 @@ Play 版本)。
 **使用 curl (推荐):**
 
 ```bash
-bash <(curl -s https://raw.githubusercontent.com/mc10091009/st_manager.sh/refs/heads/main/angler_toolbox.sh)
+bash <(curl -s https://raw.githubusercontent.com/mc10091009/st_manager.sh/main/angler_toolbox.sh)
 ```
 
 ## 菜单说明

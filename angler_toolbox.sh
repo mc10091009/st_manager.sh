@@ -39,7 +39,7 @@ function init_environment() {
     print_info "正在检查环境依赖..."
     
     # 检查必要命令是否存在
-    DEPENDENCIES=("curl" "git" "node" "python" "jq" "unzip")
+    DEPENDENCIES=("curl" "git" "node" "python" "tar")
     MISSING_DEPS=()
     
     for dep in "${DEPENDENCIES[@]}"; do
@@ -58,7 +58,7 @@ function init_environment() {
         
         # 安装依赖
         print_info "正在安装缺失依赖..."
-        pkg update && pkg install curl unzip git nodejs python build-essential jq -y
+        pkg update && pkg install curl git nodejs python build-essential tar -y
         
         print_info "依赖安装完成！"
     else
@@ -153,9 +153,11 @@ function install_st() {
     
     cd "$ST_DIR" || exit
     print_info "正在安装 npm 依赖 (这可能需要一些时间)..."
-    npm install
-    
-    print_info "安装完成！你可以选择 '启动 SillyTavern' 来运行。"
+    if npm install; then
+        print_info "安装完成！你可以选择 '启动 SillyTavern' 来运行。"
+    else
+        print_error "npm 依赖安装失败，请检查网络或手动运行 'npm install'。"
+    fi
 }
 
 # 更新 SillyTavern
@@ -218,7 +220,7 @@ function rollback_st() {
     
     echo "1. 按 Commit Hash 回退"
     echo "2. 按版本号 (Tag) 切换 (推荐)"
-    echo -e "${GREEN}推荐使用按版本号 (Tag) 按版本${NC}"
+    echo -e "${GREEN}推荐使用按版本号 (Tag) 切换版本${NC}"
     read -p "请选择方式 [1-2]: " rb_choice
 
     if [[ "$rb_choice" == "2" ]]; then
@@ -263,18 +265,19 @@ function update_self() {
     print_info "当前版本: $SCRIPT_VERSION"
     print_info "正在检查脚本更新..."
     # 使用用户提供的 GitHub 仓库
-    SCRIPT_NAME=$(basename "$0")
+    SCRIPT_NAME="angler_toolbox.sh"
+    TARGET_PATH="$HOME/$SCRIPT_NAME"
     
-    if curl -s "$SCRIPT_URL" -o "${SCRIPT_NAME}.tmp"; then
+    if curl -s "$SCRIPT_URL" -o "${TARGET_PATH}.tmp"; then
         # 简单检查下载的文件是否有效
-        if grep -q "#!/bin/bash" "${SCRIPT_NAME}.tmp"; then
-            mv "${SCRIPT_NAME}.tmp" "$SCRIPT_NAME"
-            chmod +x "$SCRIPT_NAME"
+        if grep -q "#!/bin/bash" "${TARGET_PATH}.tmp"; then
+            mv "${TARGET_PATH}.tmp" "$TARGET_PATH"
+            chmod +x "$TARGET_PATH"
             print_info "脚本更新成功！正在重启..."
             # 传递参数 --skip-init 以跳过环境检查
-            exec bash "$SCRIPT_NAME" --skip-init
+            exec bash "$TARGET_PATH" --skip-init
         else
-            rm "${SCRIPT_NAME}.tmp"
+            rm "${TARGET_PATH}.tmp"
             print_error "下载的文件似乎无效，取消更新。"
         fi
     else
@@ -457,6 +460,28 @@ function safe_verify() {
 }
 
 # 卸载 SillyTavern
+function do_uninstall_st() {
+    if [ -d "$ST_DIR" ]; then
+        print_info "正在删除 SillyTavern 目录..."
+        rm -rf "$ST_DIR"
+        print_info "SillyTavern 已卸载。"
+    else
+        print_error "SillyTavern 未安装。"
+    fi
+}
+
+# 执行卸载脚本
+function do_uninstall_script() {
+    disable_autostart
+    local script_path="$HOME/angler_toolbox.sh"
+    if [ -f "$script_path" ]; then
+        rm "$script_path"
+    fi
+    print_info "脚本已卸载。再见！"
+    exit 0
+}
+
+# 卸载 SillyTavern (带验证)
 function uninstall_st_dir() {
     if [ ! -d "$ST_DIR" ]; then
         print_error "SillyTavern 未安装。"
@@ -464,23 +489,22 @@ function uninstall_st_dir() {
     fi
     
     if safe_verify "卸载 SillyTavern"; then
-        print_info "正在删除 SillyTavern 目录..."
-        rm -rf "$ST_DIR"
-        print_info "SillyTavern 已卸载。"
+        do_uninstall_st
     fi
 }
 
-# 卸载脚本
+# 卸载脚本 (带验证)
 function uninstall_script() {
     if safe_verify "卸载 Angler's Toolbox 脚本"; then
-        disable_autostart
-        local script_path="$HOME/angler_toolbox.sh"
-        if [ -f "$script_path" ]; then
-            rm "$script_path"
-        fi
-        
-        print_info "脚本已卸载。再见！"
-        exit 0
+        do_uninstall_script
+    fi
+}
+
+# 卸载全部
+function uninstall_all() {
+    if safe_verify "卸载 SillyTavern 和 管理脚本"; then
+        do_uninstall_st
+        do_uninstall_script
     fi
 }
 
@@ -495,10 +519,7 @@ function uninstall_menu() {
     case $choice in
         1) uninstall_st_dir ;;
         2) uninstall_script ;;
-        3)
-            uninstall_st_dir
-            uninstall_script
-            ;;
+        3) uninstall_all ;;
         4) return ;;
         *) print_error "无效选项" ;;
     esac
