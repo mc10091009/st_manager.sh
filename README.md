@@ -54,14 +54,14 @@ chmod +x st_manager.sh
 
 运行脚本后，你将看到以下菜单：
 
-1. **启动 SillyTavern (Start)**: 启动服务，启动后在浏览器访问 `http://127.0.0.1:8000`。
-2. **安装 SillyTavern (Install)**: 首次使用请选择此项。
-3. **更新 SillyTavern (Update)**: 更新到最新版或指定版本，操作前可选择备份。
-4. **版本回退/切换 (Rollback/Switch)**: 切换到指定 Tag 或 Commit，操作前可选择备份。
-5. **备份数据 (Backup)**: 手动备份关键数据到 `~/st_backups` 目录。
-6. **Foxium 工具箱 (Fix/Optimize)**: 运行 Foxium 修复/优化工具。
-7. **更新此脚本 (Update Script)**: 更新脚本自身到最新版。
-8. **退出 (Exit)**: 退出脚本。
+1. **启动 SillyTavern**: 启动服务，启动后在浏览器访问 `http://127.0.0.1:8000`。
+2. **安装 SillyTavern**: 首次使用请选择此项。
+3. **更新 SillyTavern**: 更新到最新版或指定版本，操作前可选择备份。
+4. **版本回退/切换**: 切换到指定 Tag 或 Commit，操作前可选择备份。
+5. **备份数据**: 手动备份关键数据到 `~/st_backups` 目录。
+6. **Foxium 工具箱**: 运行 Foxium 修复/优化工具。
+7. **更新此脚本**: 更新脚本自身到最新版。
+8. **退出**: 退出脚本。
 
 ## 注意事项
 
