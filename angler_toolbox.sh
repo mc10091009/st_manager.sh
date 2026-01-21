@@ -433,6 +433,76 @@ function toggle_autostart() {
     fi
 }
 
+# 安全验证
+function safe_verify() {
+    local action="$1"
+    print_warn "警告：即将执行【$action】！此操作不可逆！"
+    read -p "确认要继续吗？(y/n): " confirm
+    if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
+        print_info "操作已取消。"
+        return 1
+    fi
+
+    local rand_num=$((RANDOM % 9000 + 1000))
+    print_warn "二次验证：请输入随机数字 [ $rand_num ] 以确认删除："
+    read -p "请输入: " input_num
+    
+    if [[ "$input_num" == "$rand_num" ]]; then
+        return 0
+    else
+        print_error "验证码错误，操作已取消。"
+        return 1
+    fi
+}
+
+# 卸载 SillyTavern
+function uninstall_st_dir() {
+    if [ ! -d "$ST_DIR" ]; then
+        print_error "SillyTavern 未安装。"
+        return
+    fi
+    
+    if safe_verify "卸载 SillyTavern"; then
+        print_info "正在删除 SillyTavern 目录..."
+        rm -rf "$ST_DIR"
+        print_info "SillyTavern 已卸载。"
+    fi
+}
+
+# 卸载脚本
+function uninstall_script() {
+    if safe_verify "卸载 Angler's Toolbox 脚本"; then
+        disable_autostart
+        local script_path="$HOME/angler_toolbox.sh"
+        if [ -f "$script_path" ]; then
+            rm "$script_path"
+        fi
+        
+        print_info "脚本已卸载。再见！"
+        exit 0
+    fi
+}
+
+# 卸载管理菜单
+function uninstall_menu() {
+    echo "1. 卸载 SillyTavern (删除安装目录)"
+    echo "2. 卸载此脚本 (删除脚本文件及自启配置)"
+    echo "3. 卸载全部"
+    echo "4. 返回上一级"
+    read -p "请选择操作 [1-4]: " choice
+    
+    case $choice in
+        1) uninstall_st_dir ;;
+        2) uninstall_script ;;
+        3)
+            uninstall_st_dir
+            uninstall_script
+            ;;
+        4) return ;;
+        *) print_error "无效选项" ;;
+    esac
+}
+
 # 主菜单
 function main_menu() {
     while true; do
@@ -459,9 +529,10 @@ function main_menu() {
         echo "5. 备份数据"
         echo "6. 更新此脚本"
         echo -e "7. 设置开机自启 [当前: ${AUTOSTART_STATUS}]"
-        echo "8. 退出"
+        echo "8. 卸载管理 (Uninstall)"
+        echo "9. 退出"
         echo ""
-        read -p "请输入选项 [1-8]: " option
+        read -p "请输入选项 [1-9]: " option
         
         case $option in
             1) start_st; read -p "按回车键继续..." ;;
@@ -471,7 +542,8 @@ function main_menu() {
             5) backup_data; read -p "按回车键继续..." ;;
             6) update_self; read -p "按回车键继续..." ;;
             7) toggle_autostart; read -p "按回车键继续..." ;;
-            8) exit 0 ;;
+            8) uninstall_menu; read -p "按回车键继续..." ;;
+            9) exit 0 ;;
             *) print_error "无效选项"; read -p "按回车键继续..." ;;
         esac
     done
