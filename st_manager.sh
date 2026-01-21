@@ -7,6 +7,10 @@
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+PURPLE='\033[0;35m'
+BOLD='\033[1m'
 NC='\033[0m' # No Color
 
 # 默认安装目录
@@ -266,21 +270,26 @@ function update_self() {
 function main_menu() {
     while true; do
         clear
-        echo -e "${GREEN}=========================================${NC}"
-        echo -e "${GREEN}    SillyTavern Termux 一键管理脚本      ${NC}"
-        echo -e "${GREEN}    作者: 10091009mc                     ${NC}"
-        echo -e "${GREEN}=========================================${NC}"
-        echo -e "${RED}警告: 不要买任何贩子的模型api都是骗人的${NC}"
-        echo -e "${RED}警告: 反对商业化使用，此脚本是免费的，不会收费${NC}"
-        echo -e "${GREEN}=========================================${NC}"
-        echo "1. 启动 SillyTavern"
-        echo "2. 安装 SillyTavern"
-        echo "3. 更新 SillyTavern"
-        echo "4. 版本回退/切换"
-        echo "5. 备份数据"
-        echo "6. Foxium 工具箱"
-        echo "7. 更新此脚本"
-        echo "8. 退出"
+        echo -e "${CYAN}╭───────────────────────────────────────────────╮${NC}"
+        echo -e "${CYAN}│${NC} ${BOLD}${PURPLE}SillyTavern Termux 一键管理脚本${NC}               ${CYAN}│${NC}"
+        echo -e "${CYAN}│${NC} ${BLUE}作者: 10091009mc${NC}                              ${CYAN}│${NC}"
+        echo -e "${CYAN}╰───────────────────────────────────────────────╯${NC}"
+        echo ""
+        echo -e "${RED}⚠  警告: 不要买任何贩子的模型api都是骗人的${NC}"
+        echo -e "${RED}⚠  警告: 反对商业化使用，此脚本是免费的，不会收费${NC}"
+        echo ""
+        echo -e "${BOLD}┌── 核心功能 ───────────────────────────────────┐${NC}"
+        echo -e "│  ${GREEN}1.${NC} 启动 SillyTavern                         │"
+        echo -e "│  ${GREEN}2.${NC} 安装 SillyTavern                         │"
+        echo -e "│  ${GREEN}3.${NC} 更新 SillyTavern                         │"
+        echo -e "${BOLD}├── 维护工具 ───────────────────────────────────┤${NC}"
+        echo -e "│  ${GREEN}4.${NC} 版本回退/切换                            │"
+        echo -e "│  ${GREEN}5.${NC} 备份数据                                 │"
+        echo -e "│  ${GREEN}6.${NC} Foxium 工具箱                            │"
+        echo -e "${BOLD}├── 脚本设置 ───────────────────────────────────┤${NC}"
+        echo -e "│  ${GREEN}7.${NC} 更新此脚本                               │"
+        echo -e "│  ${GREEN}8.${NC} 退出                                     │"
+        echo -e "${BOLD}└───────────────────────────────────────────────┘${NC}"
         echo ""
         read -p "请输入选项 [1-8]: " option
         
