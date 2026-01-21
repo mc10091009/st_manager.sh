@@ -28,7 +28,7 @@ Play 版本)。
 **使用 curl (推荐):**
 
 ```bash
-bash <(curl -s https://raw.githubusercontent.com/你的用户名/你的仓库名/main/st_manager.sh)
+bash <(curl -s https://raw.githubusercontent.com/mc10091009/st_manager.sh/refs/heads/main/st_manager.sh)
 ```
 
 **或者手动下载运行:**
