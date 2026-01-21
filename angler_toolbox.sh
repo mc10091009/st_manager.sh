@@ -263,6 +263,28 @@ function update_self() {
     fi
 }
 
+# 设置 Termux 启动时自动运行脚本
+function setup_autostart() {
+    BASHRC="$HOME/.bashrc"
+    SCRIPT_PATH=$(realpath "$0")
+    
+    # 检查是否已经添加
+    if grep -q "bash $SCRIPT_PATH" "$BASHRC"; then
+        print_warn "已设置自动启动，正在取消..."
+        # 使用 sed 删除包含脚本路径的行
+        sed -i "\|bash $SCRIPT_PATH|d" "$BASHRC"
+        print_info "已取消自动启动。"
+    else
+        print_info "正在设置 Termux 启动时自动运行此脚本..."
+        echo "" >> "$BASHRC"
+        echo "# Auto-start Angler's Toolbox" >> "$BASHRC"
+        echo "if [ -z \"\$TMUX\" ]; then" >> "$BASHRC"
+        echo "    bash $SCRIPT_PATH" >> "$BASHRC"
+        echo "fi" >> "$BASHRC"
+        print_info "设置成功！下次打开 Termux 时将自动运行此脚本。"
+    fi
+}
+
 # 主菜单
 function main_menu() {
     while true; do
@@ -280,9 +302,10 @@ function main_menu() {
         echo "4. 版本回退/切换"
         echo "5. 备份数据"
         echo "6. 更新此脚本"
-        echo "7. 退出"
+        echo "7. 设置/取消 开机自启"
+        echo "8. 退出"
         echo ""
-        read -p "请输入选项 [1-7]: " option
+        read -p "请输入选项 [1-8]: " option
         
         case $option in
             1) start_st; read -p "按回车键继续..." ;;
@@ -291,7 +314,8 @@ function main_menu() {
             4) rollback_st; read -p "按回车键继续..." ;;
             5) backup_data; read -p "按回车键继续..." ;;
             6) update_self; read -p "按回车键继续..." ;;
-            7) exit 0 ;;
+            7) setup_autostart; read -p "按回车键继续..." ;;
+            8) exit 0 ;;
             *) print_error "无效选项"; read -p "按回车键继续..." ;;
         esac
     done
