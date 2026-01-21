@@ -19,6 +19,7 @@ ST_DIR="$HOME/SillyTavern"
 REPO_URL="https://github.com/SillyTavern/SillyTavern.git"
 BACKUP_DIR="$HOME/st_backups"
 SCRIPT_VERSION="v1.0.0"
+SCRIPT_URL="https://raw.githubusercontent.com/mc10091009/st_manager.sh/main/angler_toolbox.sh"
 
 # 打印信息函数
 function print_info() {
@@ -262,7 +263,6 @@ function update_self() {
     print_info "当前版本: $SCRIPT_VERSION"
     print_info "正在检查脚本更新..."
     # 使用用户提供的 GitHub 仓库
-    SCRIPT_URL="https://raw.githubusercontent.com/mc10091009/st_manager.sh/main/angler_toolbox.sh"
     SCRIPT_NAME=$(basename "$0")
     
     if curl -s "$SCRIPT_URL" -o "${SCRIPT_NAME}.tmp"; then
@@ -282,25 +282,47 @@ function update_self() {
     fi
 }
 
-# 设置 Termux 启动时自动运行脚本
-function setup_autostart() {
+# 强制设置 Termux 启动时自动运行脚本
+function ensure_autostart() {
     BASHRC="$HOME/.bashrc"
-    SCRIPT_PATH=$(realpath "$0")
-    
-    # 检查是否已经添加
-    if grep -q "bash $SCRIPT_PATH" "$BASHRC"; then
-        print_warn "已设置自动启动，正在取消..."
-        # 使用 sed 删除包含脚本路径的行
-        sed -i "\|bash $SCRIPT_PATH|d" "$BASHRC"
-        print_info "已取消自动启动。"
-    else
-        print_info "正在设置 Termux 启动时自动运行此脚本..."
+    SCRIPT_NAME="angler_toolbox.sh"
+    SCRIPT_PATH="$HOME/$SCRIPT_NAME"
+
+    # 如果脚本是通过管道运行的，或者不在 HOME 目录，则下载/复制到 HOME
+    if [[ "$0" == "bash" || "$(realpath "$0")" != "$SCRIPT_PATH" ]]; then
+        # 检查当前运行的脚本是否就是目标文件，如果不是则复制/下载
+        if [ -f "$0" ] && [ "$(realpath "$0")" != "$SCRIPT_PATH" ]; then
+             cp "$0" "$SCRIPT_PATH"
+        elif [ ! -f "$SCRIPT_PATH" ]; then
+             # 如果本地没有，尝试下载
+             curl -s "$SCRIPT_URL" -o "$SCRIPT_PATH"
+        fi
+        chmod +x "$SCRIPT_PATH"
+    fi
+
+    # 检查 .bashrc 是否已经配置
+    if ! grep -q "bash $SCRIPT_PATH" "$BASHRC" 2>/dev/null; then
         echo "" >> "$BASHRC"
         echo "# Auto-start Angler's Toolbox" >> "$BASHRC"
         echo "if [ -z \"\$TMUX\" ]; then" >> "$BASHRC"
         echo "    bash $SCRIPT_PATH" >> "$BASHRC"
         echo "fi" >> "$BASHRC"
-        print_info "设置成功！下次打开 Termux 时将自动运行此脚本。"
+    fi
+}
+
+# 手动切换自动启动状态 (菜单选项)
+function toggle_autostart() {
+    BASHRC="$HOME/.bashrc"
+    SCRIPT_NAME="angler_toolbox.sh"
+    SCRIPT_PATH="$HOME/$SCRIPT_NAME"
+    
+    if grep -q "bash $SCRIPT_PATH" "$BASHRC"; then
+        print_warn "正在取消自动启动..."
+        sed -i "\|bash $SCRIPT_PATH|d" "$BASHRC"
+        print_info "已取消。"
+    else
+        ensure_autostart
+        print_info "已开启自动启动。"
     fi
 }
 
@@ -333,7 +355,7 @@ function main_menu() {
             4) rollback_st; read -p "按回车键继续..." ;;
             5) backup_data; read -p "按回车键继续..." ;;
             6) update_self; read -p "按回车键继续..." ;;
-            7) setup_autostart; read -p "按回车键继续..." ;;
+            7) toggle_autostart; read -p "按回车键继续..." ;;
             8) exit 0 ;;
             *) print_error "无效选项"; read -p "按回车键继续..." ;;
         esac
@@ -344,5 +366,6 @@ function main_menu() {
 # 检查是否跳过环境初始化
 if [[ "$1" != "--skip-init" ]]; then
     init_environment
+    ensure_autostart
 fi
 main_menu
