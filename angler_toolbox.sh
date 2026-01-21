@@ -302,9 +302,9 @@ function ensure_bash_profile() {
             PROFILE="$HOME/.profile"
         else
             # 都不存在，创建 .bash_profile
-            cat << EOF > "$PROFILE"
-if [ -f "$BASHRC" ]; then
-    . "$BASHRC"
+            cat << 'EOF' > "$PROFILE"
+if [ -f "$HOME/.bashrc" ]; then
+    . "$HOME/.bashrc"
 fi
 EOF
             print_info "已创建 $PROFILE 并配置加载 .bashrc"
@@ -314,11 +314,11 @@ EOF
     
     # 检查 PROFILE 是否加载了 .bashrc
     if ! grep -q ".bashrc" "$PROFILE"; then
-        cat << EOF >> "$PROFILE"
+        cat << 'EOF' >> "$PROFILE"
 
 # Load .bashrc
-if [ -f "$BASHRC" ]; then
-    . "$BASHRC"
+if [ -f "$HOME/.bashrc" ]; then
+    . "$HOME/.bashrc"
 fi
 EOF
         print_info "已更新 $PROFILE 以加载 .bashrc"
