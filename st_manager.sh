@@ -67,19 +67,26 @@ function backup_data() {
     TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
     BACKUP_FILE="$BACKUP_DIR/st_backup_$TIMESTAMP.tar.gz"
 
-    print_info "正在备份关键数据 (public, data, config.yaml)..."
+    print_info "正在备份关键数据 (data, config.yaml, 插件)..."
     
     # 进入 ST 目录进行打包，避免包含绝对路径
     cd "$ST_DIR" || exit
     
+    # 准备备份列表
+    BACKUP_ITEMS="data"
+    
     # 检查是否存在 config.yaml
-    CONFIG_FILE=""
     if [ -f "config.yaml" ]; then
-        CONFIG_FILE="config.yaml"
+        BACKUP_ITEMS="$BACKUP_ITEMS config.yaml"
     fi
 
-    # 打包 public, data 和 config.yaml (如果存在)
-    if tar -czf "$BACKUP_FILE" public data $CONFIG_FILE 2>/dev/null; then
+    # 检查是否存在第三方插件目录 (For all users)
+    if [ -d "public/scripts/extensions/third-party" ]; then
+        BACKUP_ITEMS="$BACKUP_ITEMS public/scripts/extensions/third-party"
+    fi
+
+    # 打包
+    if tar -czf "$BACKUP_FILE" $BACKUP_ITEMS 2>/dev/null; then
         print_info "备份成功！文件已保存至: $BACKUP_FILE"
     else
         print_error "备份失败！"
