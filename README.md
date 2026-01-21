@@ -1,5 +1,11 @@
 # SillyTavern Termux 一键管理脚本
 
+> **作者**: 10091009mc
+>
+> **警告**: 不要买任何贩子的模型api都是骗人的。
+>
+> **声明**: 反对商业化使用，此脚本是免费的，不会收费。
+
 这是一个专为 Android Termux 用户设计的 SillyTavern
 (酒馆) 管理脚本。它提供了一个简单的菜单界面，帮助你轻松安装、更新、启动和回退 SillyTavern 版本。
 
@@ -48,12 +54,14 @@ chmod +x st_manager.sh
 
 运行脚本后，你将看到以下菜单：
 
-1.  **安装 SillyTavern (Install)**: 首次使用请选择此项。
-2.  **更新 SillyTavern (Update)**: 更新到最新版或指定版本，操作前可选择备份。
-3.  ** SillyTavern (Start)**: 启动服务，启动后在浏览器访问 `http://127.0.0.1:8000`。
-4.  **版本回退/切换 (Rollback/Switch)**: 切换到指定 Tag 或 Commit，操作前可选择备份。
-5.  **备份数据 (Backup)**: 手动备份关键数据到 `~/st_backups` 目录。
-6.  **退出 (Exit)**: 退出脚本。
+1. **启动 SillyTavern (Start)**: 启动服务，启动后在浏览器访问 `http://127.0.0.1:8000`。
+2. **安装 SillyTavern (Install)**: 首次使用请选择此项。
+3. **更新 SillyTavern (Update)**: 更新到最新版或指定版本，操作前可选择备份。
+4. **版本回退/切换 (Rollback/Switch)**: 切换到指定 Tag 或 Commit，操作前可选择备份。
+5. **备份数据 (Backup)**: 手动备份关键数据到 `~/st_backups` 目录。
+6. **Foxium 工具箱 (Fix/Optimize)**: 运行 Foxium 修复/优化工具。
+7. **更新此脚本 (Update Script)**: 更新脚本自身到最新版。
+8. **退出 (Exit)**: 退出脚本。
 
 ## 注意事项
 
@@ -61,3 +69,8 @@ chmod +x st_manager.sh
 - 脚本默认将 SillyTavern 安装在 `~/SillyTavern` 目录下。
 - 如果遇到网络问题导致下载失败，请尝试开启魔法上网或更换网络环境。
 
+## License
+
+**Non-Commercial License**
+
+本脚本仅供个人学习和非商业用途使用。禁止将本脚本用于任何商业目的，包括但不限于出售、捆绑销售或作为付费服务的一部分。

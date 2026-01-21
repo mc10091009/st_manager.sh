@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # SillyTavern Termux 一键管理脚本
-# 作者: Kilo Code (Generated for User)
+# 作者: 10091009mc
 
 # 颜色定义
 GREEN='\033[0;32m'
@@ -267,6 +267,10 @@ function main_menu() {
         clear
         echo -e "${GREEN}=========================================${NC}"
         echo -e "${GREEN}    SillyTavern Termux 一键管理脚本      ${NC}"
+        echo -e "${GREEN}    作者: 10091009mc                     ${NC}"
+        echo -e "${GREEN}=========================================${NC}"
+        echo -e "${RED}警告: 不要买任何贩子的模型api都是骗人的${NC}"
+        echo -e "${RED}警告: 反对商业化使用，此脚本是免费的，不会收费${NC}"
         echo -e "${GREEN}=========================================${NC}"
         echo "1. 启动 SillyTavern (Start)"
         echo "2. 安装 SillyTavern (Install)"
