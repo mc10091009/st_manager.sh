@@ -282,47 +282,154 @@ function update_self() {
     fi
 }
 
-# 强制设置 Termux 启动时自动运行脚本
-function ensure_autostart() {
-    BASHRC="$HOME/.bashrc"
-    SCRIPT_NAME="angler_toolbox.sh"
-    SCRIPT_PATH="$HOME/$SCRIPT_NAME"
-
-    # 如果脚本是通过管道运行的，或者不在 HOME 目录，则下载/复制到 HOME
-    if [[ "$0" == "bash" || "$(realpath "$0")" != "$SCRIPT_PATH" ]]; then
-        # 检查当前运行的脚本是否就是目标文件，如果不是则复制/下载
-        if [ -f "$0" ] && [ "$(realpath "$0")" != "$SCRIPT_PATH" ]; then
-             cp "$0" "$SCRIPT_PATH"
-        elif [ ! -f "$SCRIPT_PATH" ]; then
-             # 如果本地没有，尝试下载
-             curl -s "$SCRIPT_URL" -o "$SCRIPT_PATH"
-        fi
-        chmod +x "$SCRIPT_PATH"
-    fi
-
-    # 检查 .bashrc 是否已经配置
-    if ! grep -q "bash $SCRIPT_PATH" "$BASHRC" 2>/dev/null; then
-        echo "" >> "$BASHRC"
-        echo "# Auto-start Angler's Toolbox" >> "$BASHRC"
-        echo "if [ -z \"\$TMUX\" ]; then" >> "$BASHRC"
-        echo "    bash $SCRIPT_PATH" >> "$BASHRC"
-        echo "fi" >> "$BASHRC"
+# 获取文件的绝对路径 (兼容性处理)
+function get_abs_path() {
+    if command -v realpath &> /dev/null; then
+        realpath "$1"
+    else
+        readlink -f "$1"
     fi
 }
 
-# 手动切换自动启动状态 (菜单选项)
-function toggle_autostart() {
+# 确保 .bash_profile 存在并加载 .bashrc
+function ensure_bash_profile() {
+    PROFILE="$HOME/.bash_profile"
     BASHRC="$HOME/.bashrc"
+    
+    # 如果 .bash_profile 不存在，检查 .profile
+    if [ ! -f "$PROFILE" ]; then
+        if [ -f "$HOME/.profile" ]; then
+            PROFILE="$HOME/.profile"
+        else
+            # 都不存在，创建 .bash_profile
+            cat << EOF > "$PROFILE"
+if [ -f "$BASHRC" ]; then
+    . "$BASHRC"
+fi
+EOF
+            print_info "已创建 $PROFILE 并配置加载 .bashrc"
+            return
+        fi
+    fi
+    
+    # 检查 PROFILE 是否加载了 .bashrc
+    if ! grep -q ".bashrc" "$PROFILE"; then
+        cat << EOF >> "$PROFILE"
+
+# Load .bashrc
+if [ -f "$BASHRC" ]; then
+    . "$BASHRC"
+fi
+EOF
+        print_info "已更新 $PROFILE 以加载 .bashrc"
+    fi
+}
+
+# 安装脚本到 HOME 目录
+function install_script() {
     SCRIPT_NAME="angler_toolbox.sh"
     SCRIPT_PATH="$HOME/$SCRIPT_NAME"
     
-    if grep -q "bash $SCRIPT_PATH" "$BASHRC"; then
-        print_warn "正在取消自动启动..."
-        sed -i "\|bash $SCRIPT_PATH|d" "$BASHRC"
-        print_info "已取消。"
+    # 尝试获取当前脚本的绝对路径
+    CURRENT_PATH=""
+    if [ -f "$0" ]; then
+        CURRENT_PATH=$(get_abs_path "$0")
+    fi
+
+    # 判断是否需要安装/复制
+    # 如果当前运行的不是 HOME 下的脚本，则复制过去
+    if [ "$CURRENT_PATH" != "$SCRIPT_PATH" ]; then
+        # 如果当前脚本文件存在（本地运行），则复制
+        if [ -f "$CURRENT_PATH" ]; then
+             print_info "正在安装/更新脚本到 $SCRIPT_PATH ..."
+             cp "$CURRENT_PATH" "$SCRIPT_PATH"
+             chmod +x "$SCRIPT_PATH"
+        # 如果当前是管道运行 (curl | bash)，且目标不存在，则下载
+        elif [ ! -f "$SCRIPT_PATH" ]; then
+             print_info "正在下载脚本到 $SCRIPT_PATH ..."
+             if curl -s "$SCRIPT_URL" -o "$SCRIPT_PATH"; then
+                 chmod +x "$SCRIPT_PATH"
+             else
+                 print_error "下载失败，无法安装脚本。"
+             fi
+        fi
+    fi
+}
+
+# 开启自动启动
+function enable_autostart() {
+    install_script
+    
+    # 确保 Bash 环境下 .bash_profile 加载 .bashrc
+    # Termux 默认是 Login Shell，只读取 .bash_profile / .profile
+    ensure_bash_profile
+
+    SCRIPT_NAME="angler_toolbox.sh"
+    SCRIPT_PATH="$HOME/$SCRIPT_NAME"
+    START_MARKER="# BEGIN ANGLER_TOOLBOX_AUTOSTART"
+    END_MARKER="# END ANGLER_TOOLBOX_AUTOSTART"
+
+    # 支持 bash 和 zsh
+    CONFIG_FILES=("$HOME/.bashrc")
+    if [ -f "$HOME/.zshrc" ]; then
+        CONFIG_FILES+=("$HOME/.zshrc")
+    fi
+
+    for RC_FILE in "${CONFIG_FILES[@]}"; do
+        # 确保文件存在
+        touch "$RC_FILE"
+        
+        if grep -q "$START_MARKER" "$RC_FILE" 2>/dev/null; then
+            print_info "自动启动已在 $RC_FILE 中开启。"
+            continue
+        fi
+
+        # 使用单引号 EOF 避免变量展开，手动处理变量
+        cat << 'EOF' >> "$RC_FILE"
+
+# BEGIN ANGLER_TOOLBOX_AUTOSTART
+if [ -z "$TMUX" ]; then
+    if [ -f "$HOME/angler_toolbox.sh" ]; then
+        bash "$HOME/angler_toolbox.sh"
+    fi
+fi
+# END ANGLER_TOOLBOX_AUTOSTART
+EOF
+        print_info "已在 $RC_FILE 中开启自动启动。"
+    done
+}
+
+# 关闭自动启动
+function disable_autostart() {
+    START_MARKER="# BEGIN ANGLER_TOOLBOX_AUTOSTART"
+    END_MARKER="# END ANGLER_TOOLBOX_AUTOSTART"
+    
+    CONFIG_FILES=("$HOME/.bashrc" "$HOME/.zshrc")
+
+    for RC_FILE in "${CONFIG_FILES[@]}"; do
+        if [ -f "$RC_FILE" ]; then
+            if grep -q "$START_MARKER" "$RC_FILE" 2>/dev/null; then
+                # 使用 sed 删除标记之间的内容
+                sed -i "/$START_MARKER/,/$END_MARKER/d" "$RC_FILE"
+                print_info "已从 $RC_FILE 中取消自动启动。"
+            fi
+        fi
+    done
+}
+
+# 切换自动启动状态
+function toggle_autostart() {
+    START_MARKER="# BEGIN ANGLER_TOOLBOX_AUTOSTART"
+    IS_ENABLED=0
+    
+    # 检查是否在任意文件中开启
+    if grep -q "$START_MARKER" "$HOME/.bashrc" 2>/dev/null; then IS_ENABLED=1; fi
+    if [ -f "$HOME/.zshrc" ] && grep -q "$START_MARKER" "$HOME/.zshrc" 2>/dev/null; then IS_ENABLED=1; fi
+    
+    if [ $IS_ENABLED -eq 1 ]; then
+        disable_autostart
     else
-        ensure_autostart
-        print_info "已开启自动启动。"
+        enable_autostart
     fi
 }
 
@@ -330,6 +437,14 @@ function toggle_autostart() {
 function main_menu() {
     while true; do
         clear
+        # 检查自启状态
+        AUTOSTART_STATUS="${RED}未开启${NC}"
+        if grep -q "# BEGIN ANGLER_TOOLBOX_AUTOSTART" "$HOME/.bashrc" 2>/dev/null; then
+            AUTOSTART_STATUS="${GREEN}已开启${NC}"
+        elif [ -f "$HOME/.zshrc" ] && grep -q "# BEGIN ANGLER_TOOLBOX_AUTOSTART" "$HOME/.zshrc" 2>/dev/null; then
+            AUTOSTART_STATUS="${GREEN}已开启 (zsh)${NC}"
+        fi
+
         echo -e "${GREEN}=========================================${NC}"
         echo -e "${GREEN}    钓鱼佬的工具箱 - ST 管理脚本         ${NC}"
         echo -e "${GREEN}    作者: 10091009mc   版本: ${SCRIPT_VERSION}      ${NC}"
@@ -343,7 +458,7 @@ function main_menu() {
         echo "4. 版本回退/切换"
         echo "5. 备份数据"
         echo "6. 更新此脚本"
-        echo "7. 设置/取消 开机自启"
+        echo -e "7. 设置开机自启 [当前: ${AUTOSTART_STATUS}]"
         echo "8. 退出"
         echo ""
         read -p "请输入选项 [1-8]: " option
@@ -362,10 +477,40 @@ function main_menu() {
     done
 }
 
+# 首次运行检查自启
+function check_first_run_autostart() {
+    START_MARKER="# BEGIN ANGLER_TOOLBOX_AUTOSTART"
+    IS_ENABLED=0
+    if grep -q "$START_MARKER" "$HOME/.bashrc" 2>/dev/null; then IS_ENABLED=1; fi
+    if [ -f "$HOME/.zshrc" ] && grep -q "$START_MARKER" "$HOME/.zshrc" 2>/dev/null; then IS_ENABLED=1; fi
+    
+    # 如果没有开启自启，询问用户
+    if [ $IS_ENABLED -eq 0 ]; then
+        echo ""
+        print_info "检测到未开启开机自启。"
+        read -p "是否设置 Termux 启动时自动运行此脚本? (y/n, 默认 y): " choice
+        choice=${choice:-y}
+        if [[ "$choice" == "y" || "$choice" == "Y" ]]; then
+            enable_autostart
+        else
+            print_info "已跳过。你可以在菜单中手动开启。"
+        fi
+        sleep 1
+    fi
+}
+
 # 脚本入口
 # 检查是否跳过环境初始化
 if [[ "$1" != "--skip-init" ]]; then
     init_environment
-    ensure_autostart
+    install_script
+    
+    # 确保 .bash_profile 配置正确 (如果已开启自启)
+    START_MARKER="# BEGIN ANGLER_TOOLBOX_AUTOSTART"
+    if grep -q "$START_MARKER" "$HOME/.bashrc" 2>/dev/null; then
+        ensure_bash_profile
+    fi
+    
+    check_first_run_autostart
 fi
 main_menu
