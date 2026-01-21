@@ -185,7 +185,7 @@ function rollback_st() {
     git fetch --all
     
     echo "1. 按 Commit Hash 回退"
-    echo "2. 按版本号 (Tag) 切换"
+    echo "2. 按版本号 (Tag) 切换 (推荐)"
     read -p "请选择方式 [1-2]: " rb_choice
 
     if [[ "$rb_choice" == "2" ]]; then
@@ -225,6 +225,42 @@ function start_st() {
     node server.js
 }
 
+# 运行 Foxium 工具
+function run_foxium() {
+    print_info "正在启动 Foxium (酒馆多功能修复/优化/备份小工具)..."
+    print_warn "请确保已退出其他一键脚本。"
+    
+    # 下载并运行 Foxium
+    if curl -O -s https://raw.githubusercontent.com/dz114879/ST-foxium/refs/heads/main/foxium.sh; then
+        bash foxium.sh
+    else
+        print_error "下载 Foxium 失败，请检查网络连接。"
+    fi
+}
+
+# 更新脚本自身
+function update_self() {
+    print_info "正在检查脚本更新..."
+    # 使用用户提供的 GitHub 仓库
+    SCRIPT_URL="https://raw.githubusercontent.com/mc10091009/st_manager.sh/main/st_manager.sh"
+    SCRIPT_NAME=$(basename "$0")
+    
+    if curl -s "$SCRIPT_URL" -o "${SCRIPT_NAME}.tmp"; then
+        # 简单检查下载的文件是否有效
+        if grep -q "#!/bin/bash" "${SCRIPT_NAME}.tmp"; then
+            mv "${SCRIPT_NAME}.tmp" "$SCRIPT_NAME"
+            chmod +x "$SCRIPT_NAME"
+            print_info "脚本更新成功！正在重启..."
+            exec bash "$SCRIPT_NAME"
+        else
+            rm "${SCRIPT_NAME}.tmp"
+            print_error "下载的文件似乎无效，取消更新。"
+        fi
+    else
+        print_error "下载失败，请检查网络连接。"
+    fi
+}
+
 # 主菜单
 function main_menu() {
     while true; do
@@ -232,22 +268,26 @@ function main_menu() {
         echo -e "${GREEN}=========================================${NC}"
         echo -e "${GREEN}    SillyTavern Termux 一键管理脚本      ${NC}"
         echo -e "${GREEN}=========================================${NC}"
-        echo "1. 安装 SillyTavern (Install)"
-        echo "2. 更新 SillyTavern (Update)"
-        echo "3. 启动 SillyTavern (Start)"
+        echo "1. 启动 SillyTavern (Start)"
+        echo "2. 安装 SillyTavern (Install)"
+        echo "3. 更新 SillyTavern (Update)"
         echo "4. 版本回退/切换 (Rollback/Switch)"
         echo "5. 备份数据 (Backup)"
-        echo "6. 退出 (Exit)"
+        echo "6. Foxium 工具箱 (Fix/Optimize)"
+        echo "7. 更新此脚本 (Update Script)"
+        echo "8. 退出 (Exit)"
         echo ""
-        read -p "请输入选项 [1-6]: " option
+        read -p "请输入选项 [1-8]: " option
         
         case $option in
-            1) install_st; read -p "按回车键继续..." ;;
-            2) update_st; read -p "按回车键继续..." ;;
-            3) start_st; read -p "按回车键继续..." ;;
+            1) start_st; read -p "按回车键继续..." ;;
+            2) install_st; read -p "按回车键继续..." ;;
+            3) update_st; read -p "按回车键继续..." ;;
             4) rollback_st; read -p "按回车键继续..." ;;
             5) backup_data; read -p "按回车键继续..." ;;
-            6) exit 0 ;;
+            6) run_foxium; read -p "按回车键继续..." ;;
+            7) update_self; read -p "按回车键继续..." ;;
+            8) exit 0 ;;
             *) print_error "无效选项"; read -p "按回车键继续..." ;;
         esac
     done

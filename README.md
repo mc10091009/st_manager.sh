@@ -50,7 +50,7 @@ chmod +x st_manager.sh
 
 1.  **安装 SillyTavern (Install)**: 首次使用请选择此项。
 2.  **更新 SillyTavern (Update)**: 更新到最新版或指定版本，操作前可选择备份。
-3.  **启动 SillyTavern (Start)**: 启动服务，启动后在浏览器访问 `http://127.0.0.1:8000`。
+3.  ** SillyTavern (Start)**: 启动服务，启动后在浏览器访问 `http://127.0.0.1:8000`。
 4.  **版本回退/切换 (Rollback/Switch)**: 切换到指定 Tag 或 Commit，操作前可选择备份。
 5.  **备份数据 (Backup)**: 手动备份关键数据到 `~/st_backups` 目录。
 6.  **退出 (Exit)**: 退出脚本。
