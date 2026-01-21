@@ -35,27 +35,45 @@ function print_error() {
 
 # 初始化环境检查
 function init_environment() {
-    print_info "正在初始化 Termux 环境..."
+    print_info "正在检查环境依赖..."
     
-    # 1. 更新 Termux 包
-    print_info "正在更新 Termux 包 (pkg upgrade)..."
-    yes | pkg upgrade
+    # 检查必要命令是否存在
+    DEPENDENCIES=("curl" "git" "node" "python" "jq" "unzip")
+    MISSING_DEPS=()
     
-    # 2. 安装必要依赖
-    print_info "正在安装必要依赖 (curl, git, nodejs, python, build-essential)..."
-    pkg update && pkg install curl unzip git nodejs python build-essential jq -y
+    for dep in "${DEPENDENCIES[@]}"; do
+        if ! command -v "$dep" &> /dev/null; then
+            MISSING_DEPS+=("$dep")
+        fi
+    done
     
-    # 3. 验证 Node.js 版本
+    # 如果有缺失的依赖，则进行安装
+    if [ ${#MISSING_DEPS[@]} -ne 0 ]; then
+        print_warn "发现缺失依赖: ${MISSING_DEPS[*]}，正在安装..."
+        
+        # 更新 Termux 包
+        print_info "正在更新 Termux 包 (pkg upgrade)..."
+        yes | pkg upgrade
+        
+        # 安装依赖
+        print_info "正在安装缺失依赖..."
+        pkg update && pkg install curl unzip git nodejs python build-essential jq -y
+        
+        print_info "依赖安装完成！"
+    else
+        print_info "所有依赖已安装，跳过环境初始化。"
+    fi
+    
+    # 验证 Node.js 版本
     if command -v node &> /dev/null; then
         NODE_VERSION=$(node -v)
-        print_info "Node.js 已安装: $NODE_VERSION"
+        print_info "Node.js 版本: $NODE_VERSION"
     else
         print_error "Node.js 安装失败，请尝试手动安装: pkg install nodejs"
         exit 1
     fi
     
-    print_info "环境初始化完成！"
-    sleep 2
+    sleep 1
 }
 
 # 备份数据
