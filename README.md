@@ -48,8 +48,7 @@ bash <(curl -s https://raw.githubusercontent.com/mc10091009/st_manager.sh/refs/h
 5. **备份数据**: 手动备份关键数据到 `~/st_backups` 目录。
 6. **更新此脚本**: 更新脚本自身到最新版。
 7. **设置/取消 开机自启**: 设置 Termux 启动时自动运行此脚本。
-8. **Foxium 工具箱**: 集成 Foxium 工具，提供修复、优化和备份功能 (需挂梯子)。
-9. **退出**: 退出脚本。
+8. **退出**: 退出脚本。
 
 ## 注意事项
 

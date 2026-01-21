@@ -2,7 +2,7 @@
 
 # 钓鱼佬的工具箱 - SillyTavern Termux 管理脚本
 # 作者: 10091009mc
-# 版本: v1.2.0
+# 版本: v1.0.0
 
 # 颜色定义
 GREEN='\033[0;32m'
@@ -18,7 +18,7 @@ NC='\033[0m' # No Color
 ST_DIR="$HOME/SillyTavern"
 REPO_URL="https://github.com/SillyTavern/SillyTavern.git"
 BACKUP_DIR="$HOME/st_backups"
-SCRIPT_VERSION="v1.2.0"
+SCRIPT_VERSION="v1.0.0"
 
 # 打印信息函数
 function print_info() {
@@ -304,24 +304,6 @@ function setup_autostart() {
     fi
 }
 
-# 运行 Foxium 工具箱
-function run_foxium() {
-    print_info "准备启动 Foxium 工具箱..."
-    print_warn "注意：需要挂梯子 (VPN) 才能使用。"
-    print_warn "注意：Foxium 是第三方脚本，将下载到 HOME 目录并运行。"
-    
-    read -p "是否继续? (y/n): " choice
-    if [[ "$choice" == "y" || "$choice" == "Y" ]]; then
-        # 确保在 HOME 目录，确保在酒馆目录外面
-        cd "$HOME" || exit
-        
-        print_info "正在下载并运行 Foxium..."
-        curl -O -s https://raw.githubusercontent.com/dz114879/ST-foxium/refs/heads/main/foxium.sh && bash foxium.sh
-    else
-        print_info "已取消。"
-    fi
-}
-
 # 主菜单
 function main_menu() {
     while true; do
@@ -340,10 +322,9 @@ function main_menu() {
         echo "5. 备份数据"
         echo "6. 更新此脚本"
         echo "7. 设置/取消 开机自启"
-        echo "8. Foxium 工具箱 (修复/优化/备份)"
-        echo "9. 退出"
+        echo "8. 退出"
         echo ""
-        read -p "请输入选项 [1-9]: " option
+        read -p "请输入选项 [1-8]: " option
         
         case $option in
             1) start_st; read -p "按回车键继续..." ;;
@@ -353,8 +334,7 @@ function main_menu() {
             5) backup_data; read -p "按回车键继续..." ;;
             6) update_self; read -p "按回车键继续..." ;;
             7) setup_autostart; read -p "按回车键继续..." ;;
-            8) run_foxium; read -p "按回车键继续..." ;;
-            9) exit 0 ;;
+            8) exit 0 ;;
             *) print_error "无效选项"; read -p "按回车键继续..." ;;
         esac
     done
