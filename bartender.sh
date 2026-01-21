@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# SillyTavern Termux 一键管理脚本
+# Bartender (酒保) - SillyTavern Termux 管理脚本
 # 作者: 10091009mc
 # 版本: v1.1.0
 
@@ -243,7 +243,7 @@ function update_self() {
     print_info "当前版本: $SCRIPT_VERSION"
     print_info "正在检查脚本更新..."
     # 使用用户提供的 GitHub 仓库
-    SCRIPT_URL="https://raw.githubusercontent.com/mc10091009/st_manager.sh/main/st_manager.sh"
+    SCRIPT_URL="https://raw.githubusercontent.com/mc10091009/st_manager.sh/main/bartender.sh"
     SCRIPT_NAME=$(basename "$0")
     
     if curl -s "$SCRIPT_URL" -o "${SCRIPT_NAME}.tmp"; then
@@ -268,7 +268,7 @@ function main_menu() {
     while true; do
         clear
         echo -e "${GREEN}=========================================${NC}"
-        echo -e "${GREEN}    SillyTavern Termux 一键管理脚本      ${NC}"
+        echo -e "${GREEN}    Bartender (酒保) - ST 管理脚本       ${NC}"
         echo -e "${GREEN}    作者: 10091009mc   版本: ${SCRIPT_VERSION}      ${NC}"
         echo -e "${GREEN}=========================================${NC}"
         echo -e "${RED}${BOLD}警告: 不要买任何贩子的模型api都是骗人的${NC}"

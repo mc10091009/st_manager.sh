@@ -1,4 +1,4 @@
-# SillyTavern Termux 一键管理脚本
+# Bartender (酒保) - SillyTavern Termux 管理脚本
 
 > **作者**: 10091009mc
 >
@@ -34,7 +34,7 @@ Play 版本)。
 **使用 curl (推荐):**
 
 ```bash
-bash <(curl -s https://raw.githubusercontent.com/mc10091009/st_manager.sh/refs/heads/main/st_manager.sh)
+bash <(curl -s https://raw.githubusercontent.com/mc10091009/st_manager.sh/refs/heads/main/bartender.sh)
 ```
 
 ## 菜单说明
