@@ -2,6 +2,7 @@
 
 # SillyTavern Termux 一键管理脚本
 # 作者: 10091009mc
+# 版本: v1.1.0
 
 # 颜色定义
 GREEN='\033[0;32m'
@@ -17,6 +18,7 @@ NC='\033[0m' # No Color
 ST_DIR="$HOME/SillyTavern"
 REPO_URL="https://github.com/SillyTavern/SillyTavern.git"
 BACKUP_DIR="$HOME/st_backups"
+SCRIPT_VERSION="v1.1.0"
 
 # 打印信息函数
 function print_info() {
@@ -238,6 +240,7 @@ function start_st() {
 
 # 更新脚本自身
 function update_self() {
+    print_info "当前版本: $SCRIPT_VERSION"
     print_info "正在检查脚本更新..."
     # 使用用户提供的 GitHub 仓库
     SCRIPT_URL="https://raw.githubusercontent.com/mc10091009/st_manager.sh/main/st_manager.sh"
@@ -266,7 +269,7 @@ function main_menu() {
         clear
         echo -e "${GREEN}=========================================${NC}"
         echo -e "${GREEN}    SillyTavern Termux 一键管理脚本      ${NC}"
-        echo -e "${GREEN}    作者: 10091009mc                     ${NC}"
+        echo -e "${GREEN}    作者: 10091009mc   版本: ${SCRIPT_VERSION}      ${NC}"
         echo -e "${GREEN}=========================================${NC}"
         echo -e "${RED}${BOLD}警告: 不要买任何贩子的模型api都是骗人的${NC}"
         echo -e "${RED}${BOLD}警告: 反对商业化使用，此脚本是免费的，不会收费${NC}"
