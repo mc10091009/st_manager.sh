@@ -436,7 +436,8 @@ function toggle_autostart() {
 # 安全验证
 function safe_verify() {
     local action="$1"
-    print_warn "警告：即将执行【$action】！此操作不可逆！"
+    print_warn "警告：即将执行【$action】！"
+    print_warn "此操作不可逆，所有数据将会被清除，请确保你已完成备份数据操作！"
     read -p "确认要继续吗？(y/n): " confirm
     if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
         print_info "操作已取消。"
