@@ -39,7 +39,7 @@ function init_environment() {
     print_info "正在检查环境依赖..."
     
     # 检查必要命令是否存在
-    DEPENDENCIES=("curl" "git" "node" "python" "tar")
+    DEPENDENCIES=("curl" "git" "node" "python" "tar" "jq")
     MISSING_DEPS=()
     
     for dep in "${DEPENDENCIES[@]}"; do
@@ -58,7 +58,7 @@ function init_environment() {
         
         # 安装依赖
         print_info "正在安装缺失依赖..."
-        pkg update && pkg install curl git nodejs python build-essential tar -y
+        pkg update && pkg install curl git nodejs python build-essential tar jq -y
         
         print_info "依赖安装完成！"
     else
@@ -99,6 +99,11 @@ function backup_data() {
     # 检查是否存在 config.yaml
     if [ -f "config.yaml" ]; then
         BACKUP_ITEMS="$BACKUP_ITEMS config.yaml"
+    fi
+
+    # 检查是否存在 secrets.json
+    if [ -f "secrets.json" ]; then
+        BACKUP_ITEMS="$BACKUP_ITEMS secrets.json"
     fi
 
     # 检查是否存在第三方插件目录 (For all users)
@@ -256,6 +261,17 @@ function start_st() {
     fi
     
     cd "$ST_DIR" || exit
+
+    if [ ! -d "node_modules" ]; then
+        print_warn "检测到 node_modules 缺失，正在安装依赖..."
+        if npm install; then
+            print_info "依赖安装完成。"
+        else
+            print_error "依赖安装失败，无法启动。"
+            return
+        fi
+    fi
+
     print_info "正在启动 SillyTavern..."
     node server.js
 }
