@@ -2,7 +2,7 @@
 
 # 钓鱼佬的工具箱 - SillyTavern Termux 管理脚本
 # 作者: 10091009mc
-# 版本: v1.2.4
+# 版本: v1.2.5
 
 # 颜色定义
 GREEN='\033[0;32m'
@@ -18,7 +18,7 @@ NC='\033[0m' # No Color
 ST_DIR="$HOME/SillyTavern"
 REPO_URL="https://github.com/SillyTavern/SillyTavern.git"
 BACKUP_DIR="$HOME/st_backups"
-SCRIPT_VERSION="v1.2.4"
+SCRIPT_VERSION="v1.2.5"
 SCRIPT_URL="https://raw.githubusercontent.com/mc10091009/st_manager.sh/main/angler_toolbox.sh"
 
 # 打印信息函数
@@ -39,7 +39,7 @@ function init_environment() {
     print_info "正在检查环境依赖..."
     
     # 检查必要命令是否存在
-    DEPENDENCIES=("curl" "git" "node" "python" "tar" "jq" "lsof")
+    DEPENDENCIES=("curl" "git" "node" "python" "tar" "jq" "lsof" "fuser" "pgrep")
     MISSING_DEPS=()
     
     for dep in "${DEPENDENCIES[@]}"; do
@@ -58,7 +58,7 @@ function init_environment() {
         
         # 安装依赖
         print_info "正在安装缺失依赖..."
-        pkg update && pkg install curl git nodejs python build-essential tar jq lsof -y
+        pkg update && pkg install curl git nodejs python build-essential tar jq lsof psmisc procps -y
         
         print_info "依赖安装完成！"
     else
@@ -342,16 +342,21 @@ function check_port() {
     # 尝试多种方式获取 PID，以兼容不同环境
     local pids=""
     
+    # 方法 0: fuser (通常很可靠，需要 psmisc)
+    if command -v fuser &> /dev/null; then
+        pids=$(fuser $port/tcp 2>/dev/null)
+    fi
+
     # 方法 1: lsof -t
-    if command -v lsof &> /dev/null; then
+    if [ -z "$pids" ] && command -v lsof &> /dev/null; then
         pids=$(lsof -t -i :$port 2>/dev/null)
     fi
     
     # 方法 2: netstat (如果 lsof 没找到或者没装)
     if [ -z "$pids" ] && command -v netstat &> /dev/null; then
         # netstat -nlp | grep :8000
-        # 输出示例: tcp        0      0 0.0.0.0:8000            0.0.0.0:*               LISTEN      12345/node
-        pids=$(netstat -nlp 2>/dev/null | grep ":$port " | awk '{print $7}' | cut -d'/' -f1 | sort -u)
+        # 使用 grep -E 匹配 :8000 后跟空格或行尾，防止匹配到 80000
+        pids=$(netstat -nlp 2>/dev/null | grep -E ":$port[[:space:]]" | awk '{print $7}' | cut -d'/' -f1 | sort -u)
     fi
 
     # 方法 3: ss (作为备选)
@@ -360,20 +365,35 @@ function check_port() {
         pids=$(ss -lptn "sport = :$port" 2>/dev/null | grep "pid=" | sed 's/.*pid=\([0-9]*\).*/\1/' | sort -u)
     fi
     
+    # 方法 4: 进程名匹配 (兜底方案)
+    # 如果端口检查都失败了，但用户认为有占用，检查是否有 server.js 在运行
+    if [ -z "$pids" ]; then
+        if command -v pgrep &> /dev/null; then
+            local node_pids=$(pgrep -f "server.js")
+            if [ -n "$node_pids" ]; then
+                 print_warn "未直接检测到端口 $port 占用，但发现正在运行的 'server.js' 进程。"
+                 print_warn "这可能是 SillyTavern 进程。"
+                 pids="$node_pids"
+            fi
+        fi
+    fi
+
     if [ -n "$pids" ]; then
-        print_warn "检测到端口 $port 被占用。"
-        echo -e "${YELLOW}占用进程 PID: $pids${NC}"
+        # 规范化 PID 列表 (将换行符转为空格)
+        pids=$(echo "$pids" | tr '\n' ' ' | xargs)
+        
+        print_warn "检测到可能占用端口或相关的进程。"
+        echo -e "${YELLOW}进程 PID: $pids${NC}"
         
         # 尝试显示详细信息
         if command -v lsof &> /dev/null; then
             lsof -i :$port 2>/dev/null
         elif command -v netstat &> /dev/null; then
-            netstat -nlp 2>/dev/null | grep ":$port "
+            netstat -nlp 2>/dev/null | grep -E ":$port[[:space:]]"
         fi
         
         read -p "是否尝试终止这些进程以释放端口? (y/n): " choice
         if [[ "$choice" == "y" || "$choice" == "Y" ]]; then
-            # 将换行符替换为空格，以便循环处理
             for pid in $pids; do
                 if [ -n "$pid" ]; then
                     print_info "正在终止进程 $pid ..."
@@ -382,11 +402,16 @@ function check_port() {
             done
             sleep 1
             # 再次检查
-            if lsof -i :$port > /dev/null 2>&1 || (command -v netstat >/dev/null && netstat -nlp | grep -q ":$port "); then
-                print_error "端口清理失败，请尝试手动处理。"
-                return 1
+            local still_occupied=0
+            if (command -v lsof >/dev/null && lsof -i :$port > /dev/null 2>&1); then still_occupied=1; fi
+            if (command -v netstat >/dev/null && netstat -nlp | grep -q -E ":$port[[:space:]]"); then still_occupied=1; fi
+            if (command -v pgrep >/dev/null && pgrep -f "server.js" >/dev/null); then still_occupied=1; fi
+
+            if [ $still_occupied -eq 1 ]; then
+                 print_error "清理可能未完全成功，请重试或手动检查。"
+                 return 1
             else
-                print_info "端口已释放。"
+                print_info "清理操作已执行。"
                 return 0
             fi
         else
@@ -394,7 +419,7 @@ function check_port() {
             return 1
         fi
     else
-        print_info "端口 $port 未被占用。"
+        print_info "端口 $port 未被占用，也未发现 server.js 进程。"
     fi
     return 0
 }
