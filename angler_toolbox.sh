@@ -2,7 +2,7 @@
 
 # 钓鱼佬的工具箱 - SillyTavern Termux 管理脚本
 # 作者: 10091009mc
-# 版本: v1.2.3
+# 版本: v1.2.4
 
 # 颜色定义
 GREEN='\033[0;32m'
@@ -18,7 +18,7 @@ NC='\033[0m' # No Color
 ST_DIR="$HOME/SillyTavern"
 REPO_URL="https://github.com/SillyTavern/SillyTavern.git"
 BACKUP_DIR="$HOME/st_backups"
-SCRIPT_VERSION="v1.2.3"
+SCRIPT_VERSION="v1.2.4"
 SCRIPT_URL="https://raw.githubusercontent.com/mc10091009/st_manager.sh/main/angler_toolbox.sh"
 
 # 打印信息函数
@@ -339,31 +339,50 @@ function rollback_st() {
 function check_port() {
     local port=8000
     # 检查端口是否被占用
-    # lsof -i :8000 -t 仅输出 PID，更简洁
-    # 使用 lsof -i :8000 获取占用情况，排除表头
-    # 注意：lsof -t 有时在某些 Termux 环境下可能表现不一致，
-    # 这里改用 grep 过滤 LISTEN 状态，确保更准确
-    local check_result=$(lsof -i :$port 2>/dev/null)
+    # 尝试多种方式获取 PID，以兼容不同环境
+    local pids=""
     
-    if [[ -n "$check_result" ]]; then
-        # 提取 PID (第二列)，跳过第一行标题
-        local pids=$(echo "$check_result" | awk 'NR>1 {print $2}' | sort -u)
+    # 方法 1: lsof -t
+    if command -v lsof &> /dev/null; then
+        pids=$(lsof -t -i :$port 2>/dev/null)
+    fi
+    
+    # 方法 2: netstat (如果 lsof 没找到或者没装)
+    if [ -z "$pids" ] && command -v netstat &> /dev/null; then
+        # netstat -nlp | grep :8000
+        # 输出示例: tcp        0      0 0.0.0.0:8000            0.0.0.0:*               LISTEN      12345/node
+        pids=$(netstat -nlp 2>/dev/null | grep ":$port " | awk '{print $7}' | cut -d'/' -f1 | sort -u)
+    fi
+
+    # 方法 3: ss (作为备选)
+    if [ -z "$pids" ] && command -v ss &> /dev/null; then
+        # ss -lptn 'sport = :8000'
+        pids=$(ss -lptn "sport = :$port" 2>/dev/null | grep "pid=" | sed 's/.*pid=\([0-9]*\).*/\1/' | sort -u)
+    fi
+    
+    if [ -n "$pids" ]; then
         print_warn "检测到端口 $port 被占用。"
         echo -e "${YELLOW}占用进程 PID: $pids${NC}"
         
-        # 显示更详细的进程信息供用户参考
-        lsof -i :$port
+        # 尝试显示详细信息
+        if command -v lsof &> /dev/null; then
+            lsof -i :$port 2>/dev/null
+        elif command -v netstat &> /dev/null; then
+            netstat -nlp 2>/dev/null | grep ":$port "
+        fi
         
         read -p "是否尝试终止这些进程以释放端口? (y/n): " choice
         if [[ "$choice" == "y" || "$choice" == "Y" ]]; then
             # 将换行符替换为空格，以便循环处理
             for pid in $pids; do
-                print_info "正在终止进程 $pid ..."
-                kill -9 "$pid" 2>/dev/null
+                if [ -n "$pid" ]; then
+                    print_info "正在终止进程 $pid ..."
+                    kill -9 "$pid" 2>/dev/null
+                fi
             done
             sleep 1
             # 再次检查
-            if lsof -i :$port > /dev/null 2>&1; then
+            if lsof -i :$port > /dev/null 2>&1 || (command -v netstat >/dev/null && netstat -nlp | grep -q ":$port "); then
                 print_error "端口清理失败，请尝试手动处理。"
                 return 1
             else
