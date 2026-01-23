@@ -2,7 +2,7 @@
 
 # 钓鱼佬的工具箱 - SillyTavern Termux 管理脚本
 # 作者: 10091009mc
-# 版本: v1.2.0
+# 版本: v1.2.1
 
 # 颜色定义
 GREEN='\033[0;32m'
@@ -18,7 +18,7 @@ NC='\033[0m' # No Color
 ST_DIR="$HOME/SillyTavern"
 REPO_URL="https://github.com/SillyTavern/SillyTavern.git"
 BACKUP_DIR="$HOME/st_backups"
-SCRIPT_VERSION="v1.2.0"
+SCRIPT_VERSION="v1.2.1"
 SCRIPT_URL="https://raw.githubusercontent.com/mc10091009/st_manager.sh/main/angler_toolbox.sh"
 
 # 打印信息函数
@@ -339,35 +339,35 @@ function rollback_st() {
 function check_port() {
     local port=8000
     # 检查端口是否被占用
-    if lsof -i :$port > /dev/null 2>&1; then
+    # lsof -i :8000 -t 仅输出 PID，更简洁
+    local pids=$(lsof -t -i :$port)
+    
+    if [ -n "$pids" ]; then
         print_warn "检测到端口 $port 被占用。"
+        echo -e "${YELLOW}占用进程 PID: $pids${NC}"
         
-        # 获取占用端口的 PID
-        # lsof 输出格式: COMMAND PID USER FD TYPE DEVICE SIZE/OFF NODE NAME
-        # 使用 awk 提取第二列 (PID)，跳过第一行标题
-        local pids=$(lsof -i :$port | awk 'NR>1 {print $2}' | sort -u)
+        # 显示更详细的进程信息供用户参考
+        lsof -i :$port
         
-        if [ -n "$pids" ]; then
-            echo -e "${YELLOW}占用进程 PID: $pids${NC}"
-            read -p "是否尝试终止这些进程以释放端口? (y/n): " choice
-            if [[ "$choice" == "y" || "$choice" == "Y" ]]; then
-                for pid in $pids; do
-                    print_info "正在终止进程 $pid ..."
-                    kill -9 "$pid" 2>/dev/null
-                done
-                sleep 1
-                # 再次检查
-                if lsof -i :$port > /dev/null 2>&1; then
-                    print_error "端口清理失败，请尝试手动处理。"
-                    return 1
-                else
-                    print_info "端口已释放。"
-                    return 0
-                fi
-            else
-                print_info "跳过端口清理。"
+        read -p "是否尝试终止这些进程以释放端口? (y/n): " choice
+        if [[ "$choice" == "y" || "$choice" == "Y" ]]; then
+            # 将换行符替换为空格，以便循环处理
+            for pid in $pids; do
+                print_info "正在终止进程 $pid ..."
+                kill -9 "$pid" 2>/dev/null
+            done
+            sleep 1
+            # 再次检查
+            if lsof -i :$port > /dev/null 2>&1; then
+                print_error "端口清理失败，请尝试手动处理。"
                 return 1
+            else
+                print_info "端口已释放。"
+                return 0
             fi
+        else
+            print_info "跳过端口清理。"
+            return 1
         fi
     fi
     return 0
