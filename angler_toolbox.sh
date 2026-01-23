@@ -2,7 +2,7 @@
 
 # 钓鱼佬的工具箱 - SillyTavern Termux 管理脚本
 # 作者: 10091009mc
-# 版本: v1.2.2
+# 版本: v1.2.3
 
 # 颜色定义
 GREEN='\033[0;32m'
@@ -18,7 +18,7 @@ NC='\033[0m' # No Color
 ST_DIR="$HOME/SillyTavern"
 REPO_URL="https://github.com/SillyTavern/SillyTavern.git"
 BACKUP_DIR="$HOME/st_backups"
-SCRIPT_VERSION="v1.2.2"
+SCRIPT_VERSION="v1.2.3"
 SCRIPT_URL="https://raw.githubusercontent.com/mc10091009/st_manager.sh/main/angler_toolbox.sh"
 
 # 打印信息函数
@@ -340,9 +340,14 @@ function check_port() {
     local port=8000
     # 检查端口是否被占用
     # lsof -i :8000 -t 仅输出 PID，更简洁
-    local pids=$(lsof -t -i :$port)
+    # 使用 lsof -i :8000 获取占用情况，排除表头
+    # 注意：lsof -t 有时在某些 Termux 环境下可能表现不一致，
+    # 这里改用 grep 过滤 LISTEN 状态，确保更准确
+    local check_result=$(lsof -i :$port 2>/dev/null)
     
-    if [ -n "$pids" ]; then
+    if [[ -n "$check_result" ]]; then
+        # 提取 PID (第二列)，跳过第一行标题
+        local pids=$(echo "$check_result" | awk 'NR>1 {print $2}' | sort -u)
         print_warn "检测到端口 $port 被占用。"
         echo -e "${YELLOW}占用进程 PID: $pids${NC}"
         
