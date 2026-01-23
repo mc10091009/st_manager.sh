@@ -2,7 +2,7 @@
 
 # 钓鱼佬的工具箱 - SillyTavern Termux 管理脚本
 # 作者: 10091009mc
-# 版本: v1.1.0
+# 版本: v1.2.0
 
 # 颜色定义
 GREEN='\033[0;32m'
@@ -18,7 +18,7 @@ NC='\033[0m' # No Color
 ST_DIR="$HOME/SillyTavern"
 REPO_URL="https://github.com/SillyTavern/SillyTavern.git"
 BACKUP_DIR="$HOME/st_backups"
-SCRIPT_VERSION="v1.1.0"
+SCRIPT_VERSION="v1.2.0"
 SCRIPT_URL="https://raw.githubusercontent.com/mc10091009/st_manager.sh/main/angler_toolbox.sh"
 
 # 打印信息函数
@@ -39,7 +39,7 @@ function init_environment() {
     print_info "正在检查环境依赖..."
     
     # 检查必要命令是否存在
-    DEPENDENCIES=("curl" "git" "node" "python" "tar" "jq")
+    DEPENDENCIES=("curl" "git" "node" "python" "tar" "jq" "lsof")
     MISSING_DEPS=()
     
     for dep in "${DEPENDENCIES[@]}"; do
@@ -58,7 +58,7 @@ function init_environment() {
         
         # 安装依赖
         print_info "正在安装缺失依赖..."
-        pkg update && pkg install curl git nodejs python build-essential tar jq -y
+        pkg update && pkg install curl git nodejs python build-essential tar jq lsof -y
         
         print_info "依赖安装完成！"
     else
@@ -117,6 +117,88 @@ function backup_data() {
     else
         print_error "备份失败！"
     fi
+}
+
+# 恢复数据
+function restore_data() {
+    if [ ! -d "$ST_DIR" ]; then
+        print_error "SillyTavern 未安装，请先安装。"
+        return
+    fi
+
+    print_info "正在搜索备份文件..."
+    
+    # 启用 nullglob 以处理没有匹配文件的情况
+    shopt -s nullglob
+    # 搜索 HOME 目录和备份目录下的压缩包
+    local files=("$HOME"/*.tar.gz "$HOME"/*.tgz "$BACKUP_DIR"/*.tar.gz "$BACKUP_DIR"/*.tgz)
+    shopt -u nullglob
+
+    if [ ${#files[@]} -eq 0 ]; then
+        print_error "未找到备份文件 (.tar.gz, .tgz)。"
+        print_info "请将备份文件放入 $HOME 目录或 $BACKUP_DIR 目录。"
+        return
+    fi
+
+    echo "请选择要恢复的备份文件:"
+    local i=1
+    for f in "${files[@]}"; do
+        echo "$i. $(basename "$f")  [$(dirname "$f")]"
+        ((i++))
+    done
+
+    read -p "请输入序号 (1-${#files[@]}): " choice
+    
+    if [[ ! "$choice" =~ ^[0-9]+$ ]] || [ "$choice" -lt 1 ] || [ "$choice" -gt "${#files[@]}" ]; then
+        print_error "无效的选择。"
+        return
+    fi
+
+    local selected_file="${files[$((choice-1))]}"
+    
+    print_warn "即将从 $(basename "$selected_file") 恢复数据。"
+    print_warn "这将覆盖当前的 data, config.yaml 等文件！"
+    read -p "确认继续吗? (y/n): " confirm
+    if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
+        print_info "操作已取消。"
+        return
+    fi
+
+    print_info "正在恢复..."
+    
+    # 确保进入 ST 目录
+    cd "$ST_DIR" || exit
+    
+    if tar -xzf "$selected_file"; then
+        print_info "恢复成功！"
+        print_info "建议重启 SillyTavern 以应用更改。"
+    else
+        print_error "恢复失败，请检查备份文件是否损坏。"
+    fi
+}
+
+# 备份与恢复菜单
+function backup_restore_menu() {
+    while true; do
+        clear
+        echo -e "${GREEN}=========================================${NC}"
+        echo -e "${GREEN}         备份与恢复 (Backup & Restore)    ${NC}"
+        echo -e "${GREEN}=========================================${NC}"
+        echo "1. 备份数据 (Backup Data)"
+        echo "   - 将 data, config.yaml 等关键文件打包备份到 $BACKUP_DIR"
+        echo "2. 恢复数据 (Restore Data)"
+        echo "   - 从 $HOME 或 $BACKUP_DIR 目录下的压缩包还原数据"
+        echo "3. 返回上一级 (Return)"
+        echo ""
+        read -p "请输入选项 [1-3]: " choice
+        
+        case $choice in
+            1) backup_data; read -p "按回车键继续..." ;;
+            2) restore_data; read -p "按回车键继续..." ;;
+            3) return ;;
+            *) print_error "无效选项"; read -p "按回车键继续..." ;;
+        esac
+    done
 }
 
 # 询问是否备份
@@ -253,12 +335,53 @@ function rollback_st() {
     fi
 }
 
+# 检查并清理端口占用
+function check_port() {
+    local port=8000
+    # 检查端口是否被占用
+    if lsof -i :$port > /dev/null 2>&1; then
+        print_warn "检测到端口 $port 被占用。"
+        
+        # 获取占用端口的 PID
+        # lsof 输出格式: COMMAND PID USER FD TYPE DEVICE SIZE/OFF NODE NAME
+        # 使用 awk 提取第二列 (PID)，跳过第一行标题
+        local pids=$(lsof -i :$port | awk 'NR>1 {print $2}' | sort -u)
+        
+        if [ -n "$pids" ]; then
+            echo -e "${YELLOW}占用进程 PID: $pids${NC}"
+            read -p "是否尝试终止这些进程以释放端口? (y/n): " choice
+            if [[ "$choice" == "y" || "$choice" == "Y" ]]; then
+                for pid in $pids; do
+                    print_info "正在终止进程 $pid ..."
+                    kill -9 "$pid" 2>/dev/null
+                done
+                sleep 1
+                # 再次检查
+                if lsof -i :$port > /dev/null 2>&1; then
+                    print_error "端口清理失败，请尝试手动处理。"
+                    return 1
+                else
+                    print_info "端口已释放。"
+                    return 0
+                fi
+            else
+                print_info "跳过端口清理。"
+                return 1
+            fi
+        fi
+    fi
+    return 0
+}
+
 # 启动 SillyTavern
 function start_st() {
     if [ ! -d "$ST_DIR" ]; then
         print_error "SillyTavern 未安装，请先安装。"
         return
     fi
+    
+    # 启动前检查端口
+    check_port
     
     cd "$ST_DIR" || exit
 
@@ -564,24 +687,24 @@ function main_menu() {
         echo "2. 安装 SillyTavern"
         echo "3. 更新 SillyTavern"
         echo "4. 版本回退/切换"
-        echo "5. 备份数据"
+        echo "5. 备份与恢复 (Backup & Restore)"
         echo "6. 更新此脚本"
         echo -e "7. 设置开机自启 [当前: ${AUTOSTART_STATUS}]"
         echo "8. 卸载管理 (Uninstall)"
-        echo "9. 退出"
+        echo "0. 退出"
         echo ""
-        read -p "请输入选项 [1-9]: " option
+        read -p "请输入选项 [0-8]: " option
         
         case $option in
             1) start_st; read -p "按回车键继续..." ;;
             2) install_st; read -p "按回车键继续..." ;;
             3) update_st; read -p "按回车键继续..." ;;
             4) rollback_st; read -p "按回车键继续..." ;;
-            5) backup_data; read -p "按回车键继续..." ;;
+            5) backup_restore_menu ;;
             6) update_self; read -p "按回车键继续..." ;;
             7) toggle_autostart; read -p "按回车键继续..." ;;
             8) uninstall_menu; read -p "按回车键继续..." ;;
-            9) exit 0 ;;
+            0) exit 0 ;;
             *) print_error "无效选项"; read -p "按回车键继续..." ;;
         esac
     done

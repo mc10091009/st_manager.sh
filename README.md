@@ -20,7 +20,8 @@ bash <(curl -s https://raw.githubusercontent.com/mc10091009/st_manager.sh/main/a
 
 - **一键安装/启动**: 自动配置环境 (Node.js, Git, jq 等) 并安装 SillyTavern。
 - **版本管理**: 轻松更新、切换或回退版本。
-- **数据备份**: 自动备份关键数据 (`data`, `config.yaml`, `secrets.json`, 插件) 到 `~/st_backups`。
+- **数据备份与恢复**: 自动备份关键数据 (`data`, `config.yaml`, `secrets.json`, 插件) 到 `~/st_backups`，并支持从备份文件恢复。
+- **端口检查**: 启动前自动检查端口占用，并提供一键清理功能。
 - **开机自启**: 可设置 Termux 启动时自动运行此脚本。
 
 ## ⚠️ 注意事项
