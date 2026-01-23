@@ -2,7 +2,7 @@
 
 # 钓鱼佬的工具箱 - SillyTavern Termux 管理脚本
 # 作者: 10091009mc
-# 版本: v1.2.1
+# 版本: v1.2.2
 
 # 颜色定义
 GREEN='\033[0;32m'
@@ -18,7 +18,7 @@ NC='\033[0m' # No Color
 ST_DIR="$HOME/SillyTavern"
 REPO_URL="https://github.com/SillyTavern/SillyTavern.git"
 BACKUP_DIR="$HOME/st_backups"
-SCRIPT_VERSION="v1.2.1"
+SCRIPT_VERSION="v1.2.2"
 SCRIPT_URL="https://raw.githubusercontent.com/mc10091009/st_manager.sh/main/angler_toolbox.sh"
 
 # 打印信息函数
@@ -369,8 +369,16 @@ function check_port() {
             print_info "跳过端口清理。"
             return 1
         fi
+    else
+        print_info "端口 $port 未被占用。"
     fi
     return 0
+}
+
+# 手动检查端口菜单项
+function manual_check_port() {
+    check_port
+    read -p "按回车键继续..."
 }
 
 # 启动 SillyTavern
@@ -688,12 +696,13 @@ function main_menu() {
         echo "3. 更新 SillyTavern"
         echo "4. 版本回退/切换"
         echo "5. 备份与恢复 (Backup & Restore)"
-        echo "6. 更新此脚本"
-        echo -e "7. 设置开机自启 [当前: ${AUTOSTART_STATUS}]"
-        echo "8. 卸载管理 (Uninstall)"
+        echo "6. 端口检查与清理 (Check Port)"
+        echo "7. 更新此脚本"
+        echo -e "8. 设置开机自启 [当前: ${AUTOSTART_STATUS}]"
+        echo "9. 卸载管理 (Uninstall)"
         echo "0. 退出"
         echo ""
-        read -p "请输入选项 [0-8]: " option
+        read -p "请输入选项 [0-9]: " option
         
         case $option in
             1) start_st; read -p "按回车键继续..." ;;
@@ -701,9 +710,10 @@ function main_menu() {
             3) update_st; read -p "按回车键继续..." ;;
             4) rollback_st; read -p "按回车键继续..." ;;
             5) backup_restore_menu ;;
-            6) update_self; read -p "按回车键继续..." ;;
-            7) toggle_autostart; read -p "按回车键继续..." ;;
-            8) uninstall_menu; read -p "按回车键继续..." ;;
+            6) manual_check_port ;;
+            7) update_self; read -p "按回车键继续..." ;;
+            8) toggle_autostart; read -p "按回车键继续..." ;;
+            9) uninstall_menu; read -p "按回车键继续..." ;;
             0) exit 0 ;;
             *) print_error "无效选项"; read -p "按回车键继续..." ;;
         esac
