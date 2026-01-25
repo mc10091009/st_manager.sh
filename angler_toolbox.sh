@@ -587,6 +587,9 @@ function install_script() {
 
 # 开启自动启动
 function enable_autostart() {
+    # 先清理旧配置，防止重复
+    disable_autostart
+
     install_script
     
     # 确保 Bash 环境下 .bash_profile 加载 .bashrc
@@ -637,10 +640,28 @@ function disable_autostart() {
 
     for RC_FILE in "${CONFIG_FILES[@]}"; do
         if [ -f "$RC_FILE" ]; then
+            local modified=0
+            
+            # 1. 删除标记块
             if grep -q "$START_MARKER" "$RC_FILE" 2>/dev/null; then
-                # 使用 sed 删除标记之间的内容
                 sed -i "/$START_MARKER/,/$END_MARKER/d" "$RC_FILE"
-                print_info "已从 $RC_FILE 中取消自动启动。"
+                print_info "已从 $RC_FILE 中移除标准自启配置。"
+                modified=1
+            fi
+            
+            # 2. 清理残留的旧版启动命令 (防止重复/双重启动)
+            # 查找包含 angler_toolbox.sh 的行，且不是注释行(虽然 sed 会删掉整行)
+            if grep -q "angler_toolbox.sh" "$RC_FILE" 2>/dev/null; then
+                # 备份文件
+                cp "$RC_FILE" "${RC_FILE}.bak_$(date +%s)"
+                # 删除包含脚本名的行
+                sed -i '/angler_toolbox.sh/d' "$RC_FILE"
+                print_warn "已清理 $RC_FILE 中的残留启动命令 (已备份)。"
+                modified=1
+            fi
+            
+            if [ $modified -eq 0 ]; then
+                print_info "$RC_FILE 中未发现自启配置。"
             fi
         fi
     done
@@ -812,6 +833,21 @@ function check_first_run_autostart() {
     if grep -q "$START_MARKER" "$HOME/.bashrc" 2>/dev/null; then IS_ENABLED=1; fi
     if [ -f "$HOME/.zshrc" ] && grep -q "$START_MARKER" "$HOME/.zshrc" 2>/dev/null; then IS_ENABLED=1; fi
     
+    # 检查是否存在重复配置 (导致需要退出两次的问题)
+    local dup_count=$(grep -c "angler_toolbox.sh" "$HOME/.bashrc" 2>/dev/null)
+    # 标准配置有2处引用 (if check 和 bash run)，如果超过2处，或者是旧版配置(没有marker但有命令)
+    if [ "$dup_count" -gt 2 ] || ([ $IS_ENABLED -eq 0 ] && [ "$dup_count" -gt 0 ]); then
+        echo ""
+        print_warn "检测到自启配置可能存在重复或旧版本残留。"
+        print_warn "这可能导致需要连续退出两次脚本的问题。"
+        read -p "是否尝试自动修复并重新开启自启? (y/n): " fix_choice
+        if [[ "$fix_choice" == "y" || "$fix_choice" == "Y" ]]; then
+            enable_autostart
+            print_info "修复完成！"
+            return
+        fi
+    fi
+
     # 如果没有开启自启，询问用户
     if [ $IS_ENABLED -eq 0 ]; then
         echo ""
