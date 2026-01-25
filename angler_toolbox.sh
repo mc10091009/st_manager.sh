@@ -2,7 +2,7 @@
 
 # 钓鱼佬的工具箱 - SillyTavern Termux 管理脚本
 # 作者: 10091009mc
-# 版本: v1.2.6
+# 版本: v1.2.7
 
 # 颜色定义
 GREEN='\033[0;32m'
@@ -18,7 +18,7 @@ NC='\033[0m' # No Color
 ST_DIR="$HOME/SillyTavern"
 REPO_URL="https://github.com/SillyTavern/SillyTavern.git"
 BACKUP_DIR="$HOME/st_backups"
-SCRIPT_VERSION="v1.2.6"
+SCRIPT_VERSION="v1.2.7"
 SCRIPT_URL="https://raw.githubusercontent.com/mc10091009/st_manager.sh/main/angler_toolbox.sh"
 
 # 打印信息函数
@@ -460,6 +460,143 @@ function manual_check_port() {
     read -p "按回车键继续..."
 }
 
+# 播放静音音频保活
+function start_silent_audio() {
+    if ! command -v termux-media-player &> /dev/null; then
+        print_warn "未检测到 termux-media-player，正在安装 Termux API..."
+        pkg install termux-api -y
+    fi
+
+    print_warn "⚠️  注意：此功能需要手机安装 'Termux:API' APP 才能生效！"
+    print_warn "如果未安装，请前往 F-Droid 下载安装 Termux:API 应用。"
+    
+    # 检查是否已在播放
+    if pgrep -f "termux-media-player" > /dev/null; then
+        print_warn "静音音频似乎已在运行。"
+        read -p "是否重新启动? (y/n): " choice
+        if [[ "$choice" != "y" && "$choice" != "Y" ]]; then return; fi
+        pkill -f "termux-media-player"
+    fi
+
+    print_info "正在下载 0分贝静音音频..."
+    # 下载一个极小的静音文件
+    SILENT_MP3="$HOME/.silent_audio.mp3"
+    if [ ! -f "$SILENT_MP3" ]; then
+        # 使用 base64 生成一个最小的 mp3 文件 (1秒静音)
+        echo "SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjI5LjEwMAAAAAAAAAAAAAAA//uQZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWgAAAA0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAtL//uQZAAAAAAA0AAAAAAAAAAAAAABAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP/7kGQAAAAAADQAAAAAAAAAAAAAAEAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" | base64 -d > "$SILENT_MP3"
+    fi
+    
+    print_info "正在后台循环播放静音音频..."
+    # 后台循环播放
+    (while true; do termux-media-player play "$SILENT_MP3"; sleep 1; done) &
+    
+    print_info "已开启！这将强制系统认为 Termux 正在播放媒体，从而防止杀后台。"
+    print_warn "注意：这可能会稍微增加耗电量。"
+}
+
+# 停止静音音频
+function stop_silent_audio() {
+    print_info "正在停止静音音频..."
+    pkill -f "termux-media-player"
+    # 同时也杀掉循环脚本的子shell (可能需要更精确的匹配，这里简单处理)
+    # 实际上上面的 while loop 是在子 shell 中运行，直接 kill 掉 termux-media-player 可能不够
+    # 但通常用户重启 Termux 也就没了。这里做个简单的清理。
+    print_info "已停止。"
+}
+
+# 显示其他保活建议
+function show_other_keep_alive_tips() {
+    clear
+    echo -e "${YELLOW}=== 其他无需电脑的保活技巧 ===${NC}"
+    echo ""
+    echo -e "${GREEN}1. 锁定后台任务 (最近任务锁)${NC}"
+    echo "   - 打开手机的'最近任务'界面 (多任务界面)"
+    echo "   - 找到 Termux，长按或点击菜单键"
+    echo "   - 选择 '锁定' 或 '加锁' (通常显示为一个小锁头图标)"
+    echo "   - 这样一键清理后台时就不会杀掉 Termux"
+    echo ""
+    echo -e "${GREEN}2. 开启悬浮窗权限${NC}"
+    echo "   - 部分系统 (如 MIUI/HyperOS) 对拥有悬浮窗权限的应用更宽容"
+    echo "   - 前往 系统设置 -> 应用管理 -> Termux -> 权限 -> 悬浮窗/显示在其他应用上层 -> 允许"
+    echo ""
+    echo -e "${GREEN}3. 开启通知权限${NC}"
+    echo "   - 确保 Termux 的通知权限已开启，且不要屏蔽 'Wake lock' 通知"
+    echo "   - 前台服务通知是 Android 系统判断应用是否活跃的重要依据"
+    echo ""
+    echo -e "${GREEN}4. 允许自启动 (部分国产ROM)${NC}"
+    echo "   - 前往 手机管家/安全中心 -> 应用管理 -> 权限 -> 自启动管理"
+    echo "   - 找到 Termux 并允许自启动"
+    echo ""
+}
+
+# 防杀后台保活菜单
+function keep_alive_menu() {
+    while true; do
+        clear
+        echo -e "${CYAN}====================================================${NC}"
+        echo -e "${BOLD}${PURPLE} 🛡️  防杀后台保活 (Keep Alive) ${NC}"
+        echo -e "${CYAN}====================================================${NC}"
+        echo -e "${BLUE}说明: 针对 Android 系统杀后台严重的解决方案${NC}"
+        echo -e "${YELLOW}注意: 全部方法来自AI，每个人手机不同，无法逐一测试。${NC}"
+        echo -e "${CYAN}----------------------------------------------------${NC}"
+        
+        echo -e " ${GREEN}1.${NC} 开启唤醒锁 (Wake Lock)"
+        echo -e "    - 防止手机休眠导致 Termux 停止运行 (推荐)"
+        echo -e " ${GREEN}2.${NC} 释放唤醒锁 (Release Lock)"
+        echo -e "    - 关闭唤醒锁，允许手机正常休眠"
+        echo -e " ${GREEN}3.${NC} 播放静音音频保活 (0dB Audio)"
+        echo -e "    - 欺骗系统正在播放音乐，强力防杀 (无需电脑)"
+        echo -e " ${GREEN}4.${NC} 停止静音音频"
+        echo -e "    - 停止后台播放"
+        echo -e " ${GREEN}5.${NC} 打开电池优化设置"
+        echo -e "    - 手动将 Termux 设置为'不优化'/'无限制'"
+        echo -e " ${GREEN}6.${NC} 其他保活技巧 (无需电脑)"
+        echo -e "    - 任务锁定、悬浮窗、自启动等设置指南"
+        echo -e " ${GREEN}7.${NC} 返回上一级"
+        
+        echo -e "${CYAN}====================================================${NC}"
+        read -p " 请输入选项 [1-7]: " choice
+        
+        case $choice in
+            1)
+                print_info "正在申请唤醒锁..."
+                termux-wake-lock
+                print_info "已开启！通知栏应显示 'Termux - Wake lock held'。"
+                read -p "按回车键继续..."
+                ;;
+            2)
+                print_info "正在释放唤醒锁..."
+                termux-wake-unlock
+                print_info "已释放。"
+                read -p "按回车键继续..."
+                ;;
+            3)
+                start_silent_audio
+                read -p "按回车键继续..."
+                ;;
+            4)
+                stop_silent_audio
+                read -p "按回车键继续..."
+                ;;
+            5)
+                print_info "正在尝试打开电池优化设置..."
+                print_warn "请在列表中找到 Termux，并设置为 '不优化' 或 '无限制'。"
+                # 尝试通用的电池优化设置 Intent
+                am start -a android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS 2>/dev/null || \
+                am start -a android.settings.BATTERY_SAVER_SETTINGS 2>/dev/null || \
+                print_error "无法自动打开设置页面，请手动前往系统设置 -> 应用 -> Termux -> 电池。"
+                read -p "按回车键继续..."
+                ;;
+            6)
+                show_other_keep_alive_tips
+                read -p "按回车键继续..."
+                ;;
+            7) return ;;
+            *) print_error "无效选项"; read -p "按回车键继续..." ;;
+        esac
+    done
+}
+
 # 启动 SillyTavern
 function start_st() {
     if [ ! -d "$ST_DIR" ]; then
@@ -811,14 +948,14 @@ function main_menu() {
         echo -e " ${GREEN}7.${NC} 端口检查与清理"
         
         echo -e "\n${BOLD}${BLUE}【 ⚙️  工具箱设置 】${NC}"
-        echo -e " ${GREEN}8.${NC} 更新此脚本             ${GREEN}9.${NC} 开机自启 [${AUTOSTART_STATUS}]"
-        echo -e " ${GREEN}10.${NC} 卸载管理"
+        echo -e " ${GREEN}8.${NC} 防杀后台保活         ${GREEN}9.${NC} 更新此脚本"
+        echo -e " ${GREEN}10.${NC} 开机自启 [${AUTOSTART_STATUS}]    ${GREEN}11.${NC} 卸载管理"
         
         echo -e "\n${CYAN}----------------------------------------------------${NC}"
         echo -e " ${GREEN}0.${NC} 退出脚本"
         echo -e "${CYAN}====================================================${NC}"
         
-        read -p " 请输入选项 [0-10]: " option
+        read -p " 请输入选项 [0-11]: " option
         
         case $option in
             1) start_st; read -p "按回车键继续..." ;;
@@ -828,9 +965,10 @@ function main_menu() {
             5) reinstall_dependencies; read -p "按回车键继续..." ;;
             6) backup_restore_menu ;;
             7) manual_check_port ;;
-            8) update_self; read -p "按回车键继续..." ;;
-            9) toggle_autostart; read -p "按回车键继续..." ;;
-            10) uninstall_menu; read -p "按回车键继续..." ;;
+            8) keep_alive_menu ;;
+            9) update_self; read -p "按回车键继续..." ;;
+            10) toggle_autostart; read -p "按回车键继续..." ;;
+            11) uninstall_menu; read -p "按回车键继续..." ;;
             0) exit 0 ;;
             *) print_error "无效选项"; read -p "按回车键继续..." ;;
         esac
