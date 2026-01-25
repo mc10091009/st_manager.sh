@@ -2,7 +2,7 @@
 
 # 钓鱼佬的工具箱 - SillyTavern Termux 管理脚本
 # 作者: 10091009mc
-# 版本: v1.2.6
+# 版本: v1.2.7
 
 # 颜色定义
 GREEN='\033[0;32m'
@@ -18,7 +18,7 @@ NC='\033[0m' # No Color
 ST_DIR="$HOME/SillyTavern"
 REPO_URL="https://github.com/SillyTavern/SillyTavern.git"
 BACKUP_DIR="$HOME/st_backups"
-SCRIPT_VERSION="v1.2.6"
+SCRIPT_VERSION="v1.2.7"
 SCRIPT_URL="https://raw.githubusercontent.com/mc10091009/st_manager.sh/main/angler_toolbox.sh"
 
 # 打印信息函数
@@ -777,37 +777,46 @@ function main_menu() {
     while true; do
         clear
         # 检查自启状态
-        AUTOSTART_STATUS="${RED}未开启${NC}"
+        AUTOSTART_STATUS="${RED}OFF${NC}"
         if grep -q "# BEGIN ANGLER_TOOLBOX_AUTOSTART" "$HOME/.bashrc" 2>/dev/null; then
-            AUTOSTART_STATUS="${GREEN}已开启${NC}"
+            AUTOSTART_STATUS="${GREEN}ON${NC}"
         elif [ -f "$HOME/.zshrc" ] && grep -q "# BEGIN ANGLER_TOOLBOX_AUTOSTART" "$HOME/.zshrc" 2>/dev/null; then
-            AUTOSTART_STATUS="${GREEN}已开启 (zsh)${NC}"
+            AUTOSTART_STATUS="${GREEN}ON (zsh)${NC}"
         fi
 
+        echo -e "${CYAN}
+    _                _           _
+   / \   _ __   __ _| | ___ _ __| |___
+  / _ \ | '_ \ / _\` | |/ _ \ '__| / __|
+ / ___ \| | | | (_| | |  __/ |  | \__ \
+/_/   \_\_| |_|\__, |_|\___|_|  |_|___/
+               |___/
+${NC}"
         echo -e "${CYAN}====================================================${NC}"
-        echo -e "${CYAN}         🎣 钓鱼佬的工具箱 - ST 管理脚本 ${SCRIPT_VERSION}      ${NC}"
+        echo -e "${BOLD}${PURPLE} 🎣 钓鱼佬的工具箱 (Angler's Toolbox) ${NC} ${YELLOW}${SCRIPT_VERSION}${NC}"
         echo -e "${CYAN}====================================================${NC}"
-        echo -e "${PURPLE}作者: 10091009mc${NC}"
-        echo -e "${RED}警告: 不要买任何贩子的模型api都是骗人的${NC}"
-        echo -e "${RED}警告: 反对商业化使用，此脚本是免费的${NC}"
+        echo -e "${BLUE} 作者: 10091009mc${NC}"
+        echo -e "${RED} ⚠️  警告: 不要买任何贩子的模型API，都是骗人的！${NC}"
+        echo -e "${RED} ⚠️  声明: 本脚本完全免费，禁止商业化使用！${NC}"
         echo -e "${CYAN}----------------------------------------------------${NC}"
         
-        echo -e "${BLUE}【 核心功能 】${NC}"
-        echo -e " ${GREEN}1.${NC} 启动 SillyTavern      ${GREEN}2.${NC} 安装 SillyTavern"
-        echo -e " ${GREEN}3.${NC} 更新 SillyTavern      ${GREEN}4.${NC} 版本回退/切换"
+        echo -e "${BOLD}${BLUE}【 🚀 核心功能 】${NC}"
+        printf " ${GREEN}%-2s${NC} %-24s ${GREEN}%-2s${NC} %-24s\n" "1." "启动 SillyTavern" "2." "安装 SillyTavern"
+        printf " ${GREEN}%-2s${NC} %-24s ${GREEN}%-2s${NC} %-24s\n" "3." "更新 SillyTavern" "4." "版本回退/切换"
         
-        echo -e "\n${BLUE}【 维护与修复 】${NC}"
-        echo -e " ${GREEN}5.${NC} 重新安装依赖 (Fix npm) ${GREEN}6.${NC} 备份与恢复"
-        echo -e " ${GREEN}7.${NC} 端口检查与清理"
+        echo -e "\n${BOLD}${BLUE}【 🛠️  维护与修复 】${NC}"
+        printf " ${GREEN}%-2s${NC} %-24s ${GREEN}%-2s${NC} %-24s\n" "5." "重装依赖 (Fix npm)" "6." "备份与恢复"
+        printf " ${GREEN}%-2s${NC} %-24s\n" "7." "端口检查与清理"
         
-        echo -e "\n${BLUE}【 工具箱设置 】${NC}"
-        echo -e " ${GREEN}8.${NC} 更新此脚本            ${GREEN}9.${NC} 开机自启 [${AUTOSTART_STATUS}]"
-        echo -e " ${GREEN}10.${NC} 卸载管理"
+        echo -e "\n${BOLD}${BLUE}【 ⚙️  工具箱设置 】${NC}"
+        printf " ${GREEN}%-2s${NC} %-24s ${GREEN}%-2s${NC} %-24s\n" "8." "更新此脚本" "9." "开机自启 [${AUTOSTART_STATUS}]"
+        printf " ${GREEN}%-2s${NC} %-24s\n" "10." "卸载管理"
         
-        echo -e "\n${GREEN}0.${NC} 退出脚本"
+        echo -e "\n${CYAN}----------------------------------------------------${NC}"
+        echo -e " ${GREEN}0.${NC} 退出脚本"
         echo -e "${CYAN}====================================================${NC}"
         
-        read -p "请输入选项 [0-10]: " option
+        read -p " 请输入选项 [0-10]: " option
         
         case $option in
             1) start_st; read -p "按回车键继续..." ;;
