@@ -2,7 +2,7 @@
 
 # 钓鱼佬的工具箱 - SillyTavern Termux 管理脚本
 # 作者: 10091009mc
-# 版本: v1.2.5
+# 版本: v1.2.6
 
 # 颜色定义
 GREEN='\033[0;32m'
@@ -18,7 +18,7 @@ NC='\033[0m' # No Color
 ST_DIR="$HOME/SillyTavern"
 REPO_URL="https://github.com/SillyTavern/SillyTavern.git"
 BACKUP_DIR="$HOME/st_backups"
-SCRIPT_VERSION="v1.2.5"
+SCRIPT_VERSION="v1.2.6"
 SCRIPT_URL="https://raw.githubusercontent.com/mc10091009/st_manager.sh/main/angler_toolbox.sh"
 
 # 打印信息函数
@@ -332,6 +332,36 @@ function rollback_st() {
         print_info "操作完成！"
     else
         print_error "切换失败，请检查输入是否正确。"
+    fi
+}
+
+# 重新安装依赖 (修复 npm install 失败)
+function reinstall_dependencies() {
+    if [ ! -d "$ST_DIR" ]; then
+        print_error "SillyTavern 未安装，请先安装。"
+        return
+    fi
+    
+    print_warn "此操作将重新下载并安装 SillyTavern 的运行依赖 (node_modules)。"
+    print_warn "如果之前的安装失败或启动报错，可以尝试此操作。"
+    read -p "确认继续吗? (y/n): " confirm
+    if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
+        print_info "操作已取消。"
+        return
+    fi
+
+    cd "$ST_DIR" || exit
+    
+    if [ -d "node_modules" ]; then
+        print_info "正在清理旧的依赖文件..."
+        rm -rf node_modules
+    fi
+    
+    print_info "正在执行 npm install (这可能需要几分钟)..."
+    if npm install; then
+        print_info "依赖重新安装成功！"
+    else
+        print_error "依赖安装失败。请检查网络连接，或尝试更换 npm 源。"
     fi
 }
 
@@ -733,36 +763,42 @@ function main_menu() {
             AUTOSTART_STATUS="${GREEN}已开启 (zsh)${NC}"
         fi
 
-        echo -e "${GREEN}=========================================${NC}"
-        echo -e "${GREEN}    钓鱼佬的工具箱 - ST 管理脚本         ${NC}"
-        echo -e "${GREEN}    作者: 10091009mc   版本: ${SCRIPT_VERSION}      ${NC}"
-        echo -e "${GREEN}=========================================${NC}"
-        echo -e "${RED}${BOLD}警告: 不要买任何贩子的模型api都是骗人的${NC}"
-        echo -e "${RED}${BOLD}警告: 反对商业化使用，此脚本是免费的，不会收费${NC}"
-        echo -e "${GREEN}=========================================${NC}"
-        echo "1. 启动 SillyTavern"
-        echo "2. 安装 SillyTavern"
-        echo "3. 更新 SillyTavern"
-        echo "4. 版本回退/切换"
-        echo "5. 备份与恢复 (Backup & Restore)"
-        echo "6. 端口检查与清理 (Check Port)"
-        echo "7. 更新此脚本"
-        echo -e "8. 设置开机自启 [当前: ${AUTOSTART_STATUS}]"
-        echo "9. 卸载管理 (Uninstall)"
-        echo "0. 退出"
-        echo ""
-        read -p "请输入选项 [0-9]: " option
+        echo -e "${CYAN}====================================================${NC}"
+        echo -e "${CYAN}         🎣 钓鱼佬的工具箱 - ST 管理脚本 ${SCRIPT_VERSION}      ${NC}"
+        echo -e "${CYAN}====================================================${NC}"
+        echo -e "${PURPLE}作者: 10091009mc${NC}"
+        echo -e "${RED}警告: 不要买任何贩子的模型api都是骗人的${NC}"
+        echo -e "${RED}警告: 反对商业化使用，此脚本是免费的${NC}"
+        echo -e "${CYAN}----------------------------------------------------${NC}"
+        
+        echo -e "${BLUE}【 核心功能 】${NC}"
+        echo -e " ${GREEN}1.${NC} 启动 SillyTavern      ${GREEN}2.${NC} 安装 SillyTavern"
+        echo -e " ${GREEN}3.${NC} 更新 SillyTavern      ${GREEN}4.${NC} 版本回退/切换"
+        
+        echo -e "\n${BLUE}【 维护与修复 】${NC}"
+        echo -e " ${GREEN}5.${NC} 重新安装依赖 (Fix npm) ${GREEN}6.${NC} 备份与恢复"
+        echo -e " ${GREEN}7.${NC} 端口检查与清理"
+        
+        echo -e "\n${BLUE}【 工具箱设置 】${NC}"
+        echo -e " ${GREEN}8.${NC} 更新此脚本            ${GREEN}9.${NC} 开机自启 [${AUTOSTART_STATUS}]"
+        echo -e " ${GREEN}10.${NC} 卸载管理"
+        
+        echo -e "\n${GREEN}0.${NC} 退出脚本"
+        echo -e "${CYAN}====================================================${NC}"
+        
+        read -p "请输入选项 [0-10]: " option
         
         case $option in
             1) start_st; read -p "按回车键继续..." ;;
             2) install_st; read -p "按回车键继续..." ;;
             3) update_st; read -p "按回车键继续..." ;;
             4) rollback_st; read -p "按回车键继续..." ;;
-            5) backup_restore_menu ;;
-            6) manual_check_port ;;
-            7) update_self; read -p "按回车键继续..." ;;
-            8) toggle_autostart; read -p "按回车键继续..." ;;
-            9) uninstall_menu; read -p "按回车键继续..." ;;
+            5) reinstall_dependencies; read -p "按回车键继续..." ;;
+            6) backup_restore_menu ;;
+            7) manual_check_port ;;
+            8) update_self; read -p "按回车键继续..." ;;
+            9) toggle_autostart; read -p "按回车键继续..." ;;
+            10) uninstall_menu; read -p "按回车键继续..." ;;
             0) exit 0 ;;
             *) print_error "无效选项"; read -p "按回车键继续..." ;;
         esac
