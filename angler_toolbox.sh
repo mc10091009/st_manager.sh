@@ -773,7 +773,7 @@ function disable_autostart() {
     START_MARKER="# BEGIN ANGLER_TOOLBOX_AUTOSTART"
     END_MARKER="# END ANGLER_TOOLBOX_AUTOSTART"
     
-    CONFIG_FILES=("$HOME/.bashrc" "$HOME/.zshrc")
+    CONFIG_FILES=("$HOME/.bashrc" "$HOME/.zshrc" "$HOME/.bash_profile" "$HOME/.profile" "$HOME/.zprofile")
 
     for RC_FILE in "${CONFIG_FILES[@]}"; do
         if [ -f "$RC_FILE" ]; then
@@ -983,11 +983,20 @@ function check_first_run_autostart() {
     if [ -f "$HOME/.zshrc" ] && grep -q "$START_MARKER" "$HOME/.zshrc" 2>/dev/null; then IS_ENABLED=1; fi
     
     # 检查是否存在重复配置 (导致需要退出两次的问题)
-    local dup_count=$(grep -c "angler_toolbox.sh" "$HOME/.bashrc" 2>/dev/null)
-    # 标准配置有2处引用 (if check 和 bash run)，如果超过2处，或者是旧版配置(没有marker但有命令)
-    if [ "$dup_count" -gt 2 ] || ([ $IS_ENABLED -eq 0 ] && [ "$dup_count" -gt 0 ]); then
+    # 统计所有配置文件中出现的次数
+    local total_count=0
+    for f in "$HOME/.bashrc" "$HOME/.zshrc" "$HOME/.bash_profile" "$HOME/.profile" "$HOME/.zprofile"; do
+        if [ -f "$f" ]; then
+            count=$(grep -c "angler_toolbox.sh" "$f" 2>/dev/null)
+            total_count=$((total_count + count))
+        fi
+    done
+
+    # 标准配置只在 .bashrc (或 .zshrc) 中有2处引用 (if check 和 bash run)
+    # 如果总数超过2，说明可能有多个文件都配置了启动，或者同一个文件配置了多次
+    if [ "$total_count" -gt 2 ] || ([ $IS_ENABLED -eq 0 ] && [ "$total_count" -gt 0 ]); then
         echo ""
-        print_warn "检测到自启配置可能存在重复或旧版本残留。"
+        print_warn "检测到自启配置可能存在重复或旧版本残留 (发现 $total_count 处引用)。"
         print_warn "这可能导致需要连续退出两次脚本的问题。"
         read -p "是否尝试自动修复并重新开启自启? (y/n): " fix_choice
         if [[ "$fix_choice" == "y" || "$fix_choice" == "Y" ]]; then
