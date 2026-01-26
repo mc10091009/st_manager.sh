@@ -757,7 +757,8 @@ function enable_autostart() {
         cat << 'EOF' >> "$RC_FILE"
 
 # BEGIN ANGLER_TOOLBOX_AUTOSTART
-if [ -z "$TMUX" ]; then
+if [ -z "$TMUX" ] && [ -z "$ANGLER_SESSION_GUARD" ]; then
+    export ANGLER_SESSION_GUARD=1
     if [ -f "$HOME/angler_toolbox.sh" ]; then
         bash "$HOME/angler_toolbox.sh"
     fi
@@ -773,7 +774,7 @@ function disable_autostart() {
     START_MARKER="# BEGIN ANGLER_TOOLBOX_AUTOSTART"
     END_MARKER="# END ANGLER_TOOLBOX_AUTOSTART"
     
-    CONFIG_FILES=("$HOME/.bashrc" "$HOME/.zshrc" "$HOME/.bash_profile" "$HOME/.profile" "$HOME/.zprofile")
+    CONFIG_FILES=("$HOME/.bashrc" "$HOME/.zshrc" "$HOME/.bash_profile" "$HOME/.profile" "$HOME/.zprofile" "$HOME/.bash_login")
 
     for RC_FILE in "${CONFIG_FILES[@]}"; do
         if [ -f "$RC_FILE" ]; then
@@ -985,7 +986,7 @@ function check_first_run_autostart() {
     # 检查是否存在重复配置 (导致需要退出两次的问题)
     # 统计所有配置文件中出现的次数
     local total_count=0
-    for f in "$HOME/.bashrc" "$HOME/.zshrc" "$HOME/.bash_profile" "$HOME/.profile" "$HOME/.zprofile"; do
+    for f in "$HOME/.bashrc" "$HOME/.zshrc" "$HOME/.bash_profile" "$HOME/.profile" "$HOME/.zprofile" "$HOME/.bash_login"; do
         if [ -f "$f" ]; then
             count=$(grep -c "angler_toolbox.sh" "$f" 2>/dev/null)
             total_count=$((total_count + count))
