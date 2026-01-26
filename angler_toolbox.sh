@@ -760,7 +760,7 @@ function enable_autostart() {
 if [ -z "$TMUX" ] && [ -z "$ANGLER_SESSION_GUARD" ]; then
     export ANGLER_SESSION_GUARD=1
     if [ -f "$HOME/angler_toolbox.sh" ]; then
-        bash "$HOME/angler_toolbox.sh"
+        exec bash "$HOME/angler_toolbox.sh"
     fi
 fi
 # END ANGLER_TOOLBOX_AUTOSTART
