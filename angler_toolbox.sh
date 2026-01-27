@@ -950,6 +950,7 @@ function main_menu() {
         echo -e "${BOLD}${PURPLE} 🎣 钓鱼佬的工具箱 (Angler's Toolbox) ${NC} ${YELLOW}${SCRIPT_VERSION}${NC}"
         echo -e "${CYAN}====================================================${NC}"
         echo -e "${BLUE} 作者: 10091009mc${NC}"
+        echo -e "${BLUE} Foxium 工具箱 作者: FoX | 𝓚𝓚𝓣𝓼𝓝(橘狐)${NC}"
         echo -e "${RED} ⚠️  警告: 不要买任何贩子的模型API，都是骗人的！${NC}"
         echo -e "${RED} ⚠️  声明: 本脚本完全免费，禁止商业化使用！${NC}"
         echo -e "${CYAN}----------------------------------------------------${NC}"
