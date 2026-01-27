@@ -913,6 +913,7 @@ function uninstall_menu() {
 # 运行 Foxium 工具箱
 function run_foxium() {
     print_info "正在下载 Foxium 工具箱..."
+    print_info "Foxium 工具箱是来自橘狐宝宝的【酒馆多功能修复/优化/备份小工具】"
     cd "$HOME" || exit
     if curl -O -s https://raw.githubusercontent.com/dz114879/ST-foxium/refs/heads/main/foxium.sh; then
         print_info "下载成功，正在启动..."
