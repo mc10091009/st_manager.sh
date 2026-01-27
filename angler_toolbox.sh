@@ -910,6 +910,19 @@ function uninstall_menu() {
     esac
 }
 
+# 运行 Foxium 工具箱
+function run_foxium() {
+    print_info "正在下载 Foxium 工具箱..."
+    cd "$HOME" || exit
+    if curl -O -s https://raw.githubusercontent.com/dz114879/ST-foxium/refs/heads/main/foxium.sh; then
+        print_info "下载成功，正在启动..."
+        bash foxium.sh
+    else
+        print_error "下载失败，请检查网络连接。"
+        read -p "按回车键继续..."
+    fi
+}
+
 # 主菜单
 function main_menu() {
     while true; do
@@ -951,12 +964,14 @@ function main_menu() {
         echo -e "\n${BOLD}${BLUE}【 ⚙️  工具箱设置 】${NC}"
         echo -e " ${GREEN}8.${NC} 防杀后台保活         ${GREEN}9.${NC} 更新此脚本"
         echo -e " ${GREEN}10.${NC} 开机自启 [${AUTOSTART_STATUS}]    ${GREEN}11.${NC} 卸载管理"
+        echo -e " ${GREEN}12.${NC} 运行 Foxium 工具箱"
         
         echo -e "\n${CYAN}----------------------------------------------------${NC}"
+        echo -e "${YELLOW}提示: 若遇到脚本需退出两次才能关闭，请尝试先关闭再重新开启[开机自启]功能。${NC}"
         echo -e " ${GREEN}0.${NC} 退出脚本"
         echo -e "${CYAN}====================================================${NC}"
         
-        read -p " 请输入选项 [0-11]: " option
+        read -p " 请输入选项 [0-12]: " option
         
         case $option in
             1) start_st; read -p "按回车键继续..." ;;
@@ -970,6 +985,7 @@ function main_menu() {
             9) update_self; read -p "按回车键继续..." ;;
             10) toggle_autostart; read -p "按回车键继续..." ;;
             11) uninstall_menu; read -p "按回车键继续..." ;;
+            12) run_foxium ;;
             0) exit 0 ;;
             *) print_error "无效选项"; read -p "按回车键继续..." ;;
         esac
