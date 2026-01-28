@@ -2,7 +2,7 @@
 
 # 钓鱼佬的工具箱 - SillyTavern Termux 管理脚本
 # 作者: 10091009mc
-# 版本: v1.3.1
+# 版本: v1.3.2
 
 # 颜色定义
 GREEN='\033[0;32m'
@@ -18,8 +18,17 @@ NC='\033[0m' # No Color
 ST_DIR="$HOME/SillyTavern"
 REPO_URL="https://github.com/SillyTavern/SillyTavern.git"
 BACKUP_DIR="$HOME/st_backups"
-SCRIPT_VERSION="v1.3.1"
+SCRIPT_VERSION="v1.3.2"
 SCRIPT_URL="https://raw.githubusercontent.com/mc10091009/st_manager.sh/main/angler_toolbox.sh"
+
+# 防止使用 source 或 . 运行脚本
+(return 0 2>/dev/null) && SOURCED=1 || SOURCED=0
+if [ "$SOURCED" -eq 1 ]; then
+    echo -e "\033[0;31m[错误] 请不要使用 'source' 或 '.' 来运行此脚本！\033[0m"
+    echo -e "这会导致退出脚本时关闭 Termux。"
+    echo -e "请使用以下命令运行: \033[0;32mbash $0\033[0m"
+    return 1
+fi
 
 # 打印信息函数
 function print_info() {
