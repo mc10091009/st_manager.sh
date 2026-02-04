@@ -2,7 +2,7 @@
 
 # 钓鱼佬的工具箱 - SillyTavern Termux 管理脚本
 # 作者: 10091009mc
-# 版本: v1.3.2
+# 版本: v1.3.4
 
 # 颜色定义
 GREEN='\033[0;32m'
@@ -18,7 +18,7 @@ NC='\033[0m' # No Color
 ST_DIR="$HOME/SillyTavern"
 REPO_URL="https://github.com/SillyTavern/SillyTavern.git"
 BACKUP_DIR="$HOME/st_backups"
-SCRIPT_VERSION="v1.3.2"
+SCRIPT_VERSION="v1.3.4"
 SCRIPT_URL="https://raw.githubusercontent.com/mc10091009/st_manager.sh/main/angler_toolbox.sh"
 
 # 防止使用 source 或 . 运行脚本
@@ -487,17 +487,32 @@ function start_silent_audio() {
         pkill -f "termux-media-player"
     fi
 
-    print_info "正在下载 0分贝静音音频..."
-    # 下载一个极小的静音文件
+    print_info "正在检查静音音频文件..."
     SILENT_MP3="$HOME/.silent_audio.mp3"
+    
+    # 检查文件是否存在且大小是否正常 (之前的坏文件约 243 字节，正常文件通常 > 2KB)
+    if [ -f "$SILENT_MP3" ]; then
+        local fsize=$(wc -c < "$SILENT_MP3")
+        if [ "$fsize" -lt 1000 ]; then
+            print_warn "检测到静音音频文件过小 ($fsize bytes)，正在重新下载..."
+            rm "$SILENT_MP3"
+        fi
+    fi
+
     if [ ! -f "$SILENT_MP3" ]; then
-        # 使用 base64 生成一个最小的 mp3 文件 (1秒静音)
-        echo "SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjI5LjEwMAAAAAAAAAAAAAAA//uQZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWgAAAA0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAtL//uQZAAAAAAA0AAAAAAAAAAAAAABAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP/7kGQAAAAAADQAAAAAAAAAAAAAAEAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" | base64 -d > "$SILENT_MP3"
+        print_info "正在下载 0分贝静音音频 (1-second-of-silence.mp3)..."
+        # 使用 GitHub 上的开源静音文件
+        if curl -L -s "https://raw.githubusercontent.com/anars/blank-audio/master/1-second-of-silence.mp3" -o "$SILENT_MP3"; then
+            print_info "下载成功！"
+        else
+            print_error "下载失败，请检查网络连接。"
+            return
+        fi
     fi
     
     print_info "正在后台循环播放静音音频..."
     # 后台循环播放
-    (while true; do termux-media-player play "$SILENT_MP3"; sleep 1; done) &
+    (while true; do termux-media-player play "$SILENT_MP3" > /dev/null 2>&1; sleep 1; done) &
     
     print_info "已开启！这将强制系统认为 Termux 正在播放媒体，从而防止杀后台。"
     print_warn "注意：这可能会稍微增加耗电量。"
