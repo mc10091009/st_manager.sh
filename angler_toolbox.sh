@@ -2,7 +2,7 @@
 
 # 钓鱼佬的工具箱 - SillyTavern Termux 管理脚本
 # 作者: 10091009mc
-# 版本: v1.3.4
+# 版本: v1.3.5
 
 # 颜色定义
 GREEN='\033[0;32m'
@@ -18,8 +18,9 @@ NC='\033[0m' # No Color
 ST_DIR="$HOME/SillyTavern"
 REPO_URL="https://github.com/SillyTavern/SillyTavern.git"
 BACKUP_DIR="$HOME/st_backups"
-SCRIPT_VERSION="v1.3.4"
+SCRIPT_VERSION="v1.3.5"
 SCRIPT_URL="https://raw.githubusercontent.com/mc10091009/st_manager.sh/main/angler_toolbox.sh"
+TAG_DISPLAY_LIMIT=10
 
 # 防止使用 source 或 . 运行脚本
 (return 0 2>/dev/null) && SOURCED=1 || SOURCED=0
@@ -41,6 +42,68 @@ function print_warn() {
 
 function print_error() {
     echo -e "${RED}[ERROR] $1${NC}"
+}
+
+function show_tag_overview() {
+    local tags=("$@")
+    local tag_count=${#tags[@]}
+
+    print_info "当前检测到 ${tag_count} 个版本 (Tag)。"
+    if [ "$tag_count" -eq 0 ]; then
+        print_warn "未检测到任何 Tag，可能尚未发布或网络受限。"
+        return
+    fi
+
+    local limit=$TAG_DISPLAY_LIMIT
+    if [ "$tag_count" -lt "$limit" ]; then
+        limit=$tag_count
+    fi
+
+    echo -e "${YELLOW}最近的 $limit 个版本:${NC}"
+    for ((i = 0; i < limit; i++)); do
+        printf " %2d. %s\n" $((i + 1)) "${tags[$i]}"
+    done
+}
+
+function prompt_tag_selection() {
+    local tags=("$@")
+    local tag_count=${#tags[@]}
+
+    if [ "$tag_count" -eq 0 ]; then
+        echo ""
+        return
+    fi
+
+    local limit=$TAG_DISPLAY_LIMIT
+    if [ "$tag_count" -lt "$limit" ]; then
+        limit=$tag_count
+    fi
+
+    while true; do
+        read -p "请输入版本序号 (1-$limit) 或完整 Tag，直接回车取消: " selection
+        selection=$(echo "$selection" | xargs 2>/dev/null)
+
+        if [ -z "$selection" ]; then
+            echo ""
+            return
+        fi
+
+        if [[ "$selection" =~ ^[0-9]+$ ]]; then
+            if [ "$selection" -ge 1 ] && [ "$selection" -le "$limit" ]; then
+                echo "${tags[$((selection - 1))]}"
+                return
+            else
+                print_error "序号超出范围 (1-$limit)。"
+            fi
+        else
+            if git rev-parse -q --verify "refs/tags/$selection" >/dev/null 2>&1; then
+                echo "$selection"
+                return
+            else
+                print_error "未找到名为 '$selection' 的 Tag。"
+            fi
+        fi
+    done
 }
 
 # 初始化环境检查
@@ -232,13 +295,13 @@ function install_st() {
             return
         fi
     fi
-    
+
     # 环境已在启动时检查，此处再次确认以防万一
     if ! command -v git &> /dev/null; then
         print_warn "Git 未找到，尝试重新安装..."
         pkg install git -y
     fi
-    
+
     print_info "正在克隆 SillyTavern 仓库..."
     if git clone "$REPO_URL" "$ST_DIR"; then
         print_info "克隆成功！"
@@ -246,8 +309,85 @@ function install_st() {
         print_error "克隆失败，请检查网络连接。"
         return
     fi
-    
+
     cd "$ST_DIR" || exit
+
+    print_info "正在同步远程版本信息..."
+    if ! git fetch --all --tags; then
+        print_warn "同步版本信息失败，可能无法列出可用 Tag。"
+    fi
+
+    local -a available_tags=()
+    mapfile -t available_tags < <(git tag --sort=-creatordate 2>/dev/null)
+    show_tag_overview "${available_tags[@]}"
+
+    local max_option=2
+    if [ ${#available_tags[@]} -gt 0 ]; then
+        max_option=3
+    fi
+
+    echo ""
+    echo "请选择要安装的版本:"
+    echo "1. release 分支 (推荐)"
+    echo "2. main 分支"
+    if [ $max_option -eq 3 ]; then
+        echo "3. 指定 Tag 版本"
+    fi
+    read -p "请输入选项 [1-$max_option] (默认 1): " install_choice
+    install_choice=${install_choice:-1}
+
+    local install_target="release"
+    local target_label="release 分支"
+    local selected_tag=""
+
+    case $install_choice in
+        2)
+            install_target="main"
+            target_label="main 分支"
+            ;;
+        3)
+            if [ ${#available_tags[@]} -eq 0 ]; then
+                print_warn "未检测到 Tag，继续使用 release 分支。"
+            else
+                selected_tag=$(prompt_tag_selection "${available_tags[@]}")
+                if [ -n "$selected_tag" ]; then
+                    install_target="tag:$selected_tag"
+                    target_label="Tag $selected_tag"
+                else
+                    print_warn "未选择 Tag，继续使用 release 分支。"
+                fi
+            fi
+            ;;
+    esac
+
+    if [[ "$install_target" == tag:* ]]; then
+        local tag_name="${install_target#tag:}"
+        if git checkout -q "tags/$tag_name"; then
+            print_info "已切换到 $target_label。"
+        else
+            print_error "切换到 $tag_name 失败，将改为 release 分支。"
+            install_target="release"
+            target_label="release 分支"
+        fi
+    fi
+
+    if [[ "$install_target" != tag:* ]]; then
+        if [ "$install_target" == "release" ]; then
+            if git show-ref --verify --quiet refs/remotes/origin/release; then
+                git checkout -B release origin/release
+                print_info "已切换到 release 分支。"
+            else
+                git checkout -B main origin/main
+                target_label="main 分支 (release 不存在)"
+                print_warn "未找到 release 分支，已改为 main。"
+            fi
+        else
+            git checkout -B main origin/main
+            print_info "已切换到 main 分支。"
+        fi
+    fi
+
+    print_info "将基于 ${target_label} 安装依赖。"
     print_info "正在安装 npm 依赖 (这可能需要一些时间)..."
     if npm install; then
         print_info "安装完成！你可以选择 '启动 SillyTavern' 来运行。"
@@ -262,36 +402,81 @@ function update_st() {
         print_error "SillyTavern 未安装，请先安装。"
         return
     fi
-    
+
     ask_backup
 
     cd "$ST_DIR" || exit
     print_info "正在拉取最新代码..."
-    git fetch --all
+    git fetch --all --tags
 
-    echo "1. 更新到最新版 (Latest)"
-    echo "2. 选择版本号/Tag (Select Tag)"
-    read -p "请选择更新方式 [1-2]: " update_choice
-
-    if [[ "$update_choice" == "2" ]]; then
-        echo -e "${YELLOW}最近的 10 个版本号 (Tags)：${NC}"
-        git tag --sort=-creatordate | head -n 10
-        echo ""
-        read -p "请输入要切换的版本号 (例如 1.10.0): " target_tag
-        if [ -z "$target_tag" ]; then
-            print_error "输入为空，取消操作。"
-            return
-        fi
-        target_ref="tags/$target_tag"
-    else
-        target_ref="origin/release" # 默认更新到 release 分支，通常比 main 稳定，或者根据需求改为 main
-        # 检查 release 分支是否存在，不存在则使用 main
-        if ! git show-ref --verify --quiet refs/remotes/origin/release; then
-             target_ref="origin/main"
-        fi
+    local current_branch
+    current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+    if [ "$current_branch" == "HEAD" ]; then
+        current_branch="detached (HEAD)"
     fi
-    
-    print_info "正在更新到 $target_ref ..."
+    local current_tag
+    current_tag=$(git describe --tags --exact-match 2>/dev/null || echo "")
+    local current_commit
+    current_commit=$(git rev-parse --short HEAD 2>/dev/null)
+
+    print_info "当前分支: $current_branch"
+    if [ -n "$current_tag" ]; then
+        print_info "当前版本 Tag: $current_tag"
+    else
+        print_info "当前版本: 未关联 Tag (commit $current_commit)"
+    fi
+
+    local -a available_tags=()
+    mapfile -t available_tags < <(git tag --sort=-creatordate 2>/dev/null)
+    show_tag_overview "${available_tags[@]}"
+
+    local max_option=2
+    if [ ${#available_tags[@]} -gt 0 ]; then
+        max_option=3
+    fi
+
+    echo ""
+    echo "请选择更新目标:"
+    echo "1. release 分支 (推荐)"
+    echo "2. main 分支"
+    if [ $max_option -eq 3 ]; then
+        echo "3. 指定 Tag 版本"
+    fi
+    read -p "请输入选项 [1-$max_option] (默认 1): " update_choice
+    update_choice=${update_choice:-1}
+
+    local target_ref="origin/release"
+    local target_label="release 分支"
+    local selected_tag=""
+
+    case $update_choice in
+        2)
+            target_ref="origin/main"
+            target_label="main 分支"
+            ;;
+        3)
+            if [ ${#available_tags[@]} -eq 0 ]; then
+                print_error "未检测到 Tag，无法指定版本。"
+                return
+            fi
+            selected_tag=$(prompt_tag_selection "${available_tags[@]}")
+            if [ -z "$selected_tag" ]; then
+                print_warn "未选择 Tag，取消更新。"
+                return
+            fi
+            target_ref="tags/$selected_tag"
+            target_label="Tag $selected_tag"
+            ;;
+        *)
+            if ! git show-ref --verify --quiet refs/remotes/origin/release; then
+                target_ref="origin/main"
+                target_label="main 分支 (release 不存在)"
+                print_warn "未找到 release 分支，已改为 main。"
+            fi
+            ;;
+    esac
+
+    print_info "正在更新到 ${target_label} ..."
     if git reset --hard "$target_ref"; then
         print_info "代码更新成功，正在更新依赖..."
         npm install
