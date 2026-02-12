@@ -834,7 +834,7 @@ function start_st() {
         print_error "未找到 start.sh，无法启动 SillyTavern。"
         return
     fi
-    bash start.sh "$@"
+    bash start.sh
 }
 
 # 更新脚本自身
