@@ -830,7 +830,12 @@ function start_st() {
     fi
 
     print_info "正在启动 SillyTavern..."
-    node --max-old-space-size=2048 "server.js" "$@"
+    if [ -f "start.sh" ]; then
+        bash start.sh "$@"
+    else
+        print_warn "未找到 start.sh，回退为 node server.js 启动。"
+        node server.js
+    fi
 }
 
 # 更新脚本自身
