@@ -830,7 +830,7 @@ function start_st() {
     fi
 
     print_info "正在启动 SillyTavern..."
-    node --max-old-space-size=4096 "server.js" "$@"
+    node --max-old-space-size=2048 "server.js" "$@"
 }
 
 # 更新脚本自身
