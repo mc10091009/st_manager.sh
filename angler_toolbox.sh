@@ -830,12 +830,11 @@ function start_st() {
     fi
 
     print_info "正在启动 SillyTavern..."
-    if [ -f "start.sh" ]; then
-        bash start.sh "$@"
-    else
-        print_warn "未找到 start.sh，回退为 node server.js 启动。"
-        node server.js
+    if [ ! -f "start.sh" ]; then
+        print_error "未找到 start.sh，无法启动 SillyTavern。"
+        return
     fi
+    bash start.sh "$@"
 }
 
 # 更新脚本自身
