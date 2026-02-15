@@ -21,6 +21,8 @@ BACKUP_DIR="$HOME/st_backups"
 SCRIPT_VERSION="v1.3.5"
 SCRIPT_URL="https://raw.githubusercontent.com/mc10091009/st_manager.sh/main/angler_toolbox.sh"
 TAG_DISPLAY_LIMIT=10
+CONFIG_FILE="$HOME/.angler_toolbox.conf"
+NODE_MAX_OLD_SPACE_SIZE="2048"
 
 # 防止使用 source 或 . 运行脚本
 (return 0 2>/dev/null) && SOURCED=1 || SOURCED=0
@@ -44,6 +46,71 @@ function print_error() {
     echo -e "${RED}[ERROR] $1${NC}"
 }
 
+# 加载脚本配置
+function load_config() {
+    if [ -f "$CONFIG_FILE" ]; then
+        # shellcheck disable=SC1090
+        source "$CONFIG_FILE"
+    fi
+
+    # 仅允许白名单值，防止配置被污染
+    if [[ "$NODE_MAX_OLD_SPACE_SIZE" != "" && "$NODE_MAX_OLD_SPACE_SIZE" != "2048" && "$NODE_MAX_OLD_SPACE_SIZE" != "3072" ]]; then
+        NODE_MAX_OLD_SPACE_SIZE=""
+    fi
+}
+
+# 保存脚本配置
+function save_config() {
+    cat > "$CONFIG_FILE" << EOF
+# Angler's Toolbox config
+NODE_MAX_OLD_SPACE_SIZE="${NODE_MAX_OLD_SPACE_SIZE}"
+EOF
+}
+
+# Node 内存上限设置菜单
+function set_node_memory_limit() {
+    local current="默认"
+    if [ -n "$NODE_MAX_OLD_SPACE_SIZE" ]; then
+        current="${NODE_MAX_OLD_SPACE_SIZE} MB"
+    fi
+
+    clear
+    echo -e "${GREEN}=========================================${NC}"
+    echo -e "${GREEN}          Node 内存上限设置               ${NC}"
+    echo -e "${GREEN}=========================================${NC}"
+    echo -e "当前设置: ${YELLOW}${current}${NC}"
+    echo ""
+    echo "1. 默认 (不设置参数)"
+    echo "2. 2048 MB"
+    echo "3. 3072 MB"
+    echo "4. 返回上一级"
+    echo ""
+    read -p "请输入选项 [1-4]: " choice
+
+    case $choice in
+        1)
+            NODE_MAX_OLD_SPACE_SIZE=""
+            save_config
+            print_info "已切换为默认内存策略。"
+            ;;
+        2)
+            NODE_MAX_OLD_SPACE_SIZE="2048"
+            save_config
+            print_info "已设置 Node 内存上限为 2048 MB。"
+            ;;
+        3)
+            NODE_MAX_OLD_SPACE_SIZE="3072"
+            save_config
+            print_info "已设置 Node 内存上限为 3072 MB。"
+            ;;
+        4)
+            return
+            ;;
+        *)
+            print_error "无效选项"
+            ;;
+    esac
+}
 
 function show_tag_overview() {
     local tags=("$@")
@@ -925,11 +992,12 @@ function start_st() {
     fi
 
     print_info "正在启动 SillyTavern..."
-    if [ ! -f "start.sh" ]; then
-        print_error "未找到 start.sh，无法启动 SillyTavern。"
-        return
+    if [ -n "$NODE_MAX_OLD_SPACE_SIZE" ]; then
+        print_info "Node 内存上限: ${NODE_MAX_OLD_SPACE_SIZE} MB"
+        node --max-old-space-size="$NODE_MAX_OLD_SPACE_SIZE" server.js
+    else
+        node server.js
     fi
-    bash start.sh
 }
 
 # 更新脚本自身
@@ -1272,17 +1340,23 @@ function main_menu() {
         echo -e " ${GREEN}5.${NC} 重装依赖 (Fix npm)     ${GREEN}6.${NC} 备份与恢复"
         echo -e " ${GREEN}7.${NC} 端口检查与清理"
         
+        local memory_status="默认"
+        if [ -n "$NODE_MAX_OLD_SPACE_SIZE" ]; then
+            memory_status="${NODE_MAX_OLD_SPACE_SIZE}MB"
+        fi
+
         echo -e "\n${BOLD}${BLUE}【 ⚙️  工具箱设置 】${NC}"
-        echo -e " ${GREEN}8.${NC} 防杀后台保活         ${GREEN}9.${NC} 更新此脚本"
-        echo -e " ${GREEN}10.${NC} 开机自启 [${AUTOSTART_STATUS}]    ${GREEN}11.${NC} 卸载管理"
-        echo -e " ${GREEN}12.${NC} 运行 Foxium 工具箱  ${GREEN}13.${NC} 一键修复 hostWhitelist (安全)"
+        echo -e " ${GREEN}8.${NC} 防杀后台保活         ${GREEN}9.${NC} Node 内存上限 [${memory_status}]"
+        echo -e " ${GREEN}10.${NC} 更新此脚本           ${GREEN}11.${NC} 开机自启 [${AUTOSTART_STATUS}]"
+        echo -e " ${GREEN}12.${NC} 卸载管理             ${GREEN}13.${NC} 运行 Foxium 工具箱"
+        echo -e " ${GREEN}14.${NC} 一键修复 hostWhitelist (安全)"
         
         echo -e "\n${CYAN}----------------------------------------------------${NC}"
         echo -e "${YELLOW}提示: 若遇到脚本需退出两次才能关闭，请尝试先关闭再重新开启[开机自启]功能。${NC}"
         echo -e " ${GREEN}0.${NC} 退出脚本"
         echo -e "${CYAN}====================================================${NC}"
         
-        read -p " 请输入选项 [0-13]: " option
+        read -p " 请输入选项 [0-14]: " option
         
         case $option in
             1) start_st; read -p "按回车键继续..." ;;
@@ -1293,11 +1367,12 @@ function main_menu() {
             6) backup_restore_menu ;;
             7) manual_check_port ;;
             8) keep_alive_menu ;;
-            9) update_self; read -p "按回车键继续..." ;;
-            10) toggle_autostart; read -p "按回车键继续..." ;;
-            11) uninstall_menu; read -p "按回车键继续..." ;;
-            12) run_foxium ;;
-            13) fix_host_whitelist_security; read -p "按回车键继续..." ;;
+            9) set_node_memory_limit; read -p "按回车键继续..." ;;
+            10) update_self; read -p "按回车键继续..." ;;
+            11) toggle_autostart; read -p "按回车键继续..." ;;
+            12) uninstall_menu; read -p "按回车键继续..." ;;
+            13) run_foxium ;;
+            14) fix_host_whitelist_security; read -p "按回车键继续..." ;;
             0) exit 0 ;;
             *) print_error "无效选项"; read -p "按回车键继续..." ;;
         esac
@@ -1352,6 +1427,8 @@ function check_first_run_autostart() {
 
 # 脚本入口
 # 检查是否跳过环境初始化
+load_config
+
 if [[ "$1" != "--skip-init" ]]; then
     init_environment
     install_script
