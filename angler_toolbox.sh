@@ -14,8 +14,12 @@ PURPLE='\033[0;35m'
 BOLD='\033[1m'
 NC='\033[0m' # No Color
 
-# 默认安装目录
-ST_DIR="$HOME/SillyTavern"
+# 默认安装目錄與實例管理
+ST_MAIN_DIR="$HOME/SillyTavern"
+ST_SECOND_DIR="$HOME/SillyTavern-2"
+ST_DIR="$ST_MAIN_DIR"
+CURRENT_INSTANCE="主程序 (SillyTavern)"
+
 REPO_URL="https://github.com/SillyTavern/SillyTavern.git"
 BACKUP_DIR="$HOME/st_backups"
 SCRIPT_VERSION="v1.3.5"
@@ -655,9 +659,70 @@ function reinstall_dependencies() {
     fi
 }
 
+# 切换操作实例
+function toggle_instance() {
+    if [ "$ST_DIR" == "$ST_MAIN_DIR" ]; then
+        ST_DIR="$ST_SECOND_DIR"
+        CURRENT_INSTANCE="分身程序 (SillyTavern-2)"
+    else
+        ST_DIR="$ST_MAIN_DIR"
+        CURRENT_INSTANCE="主程序 (SillyTavern)"
+    fi
+    print_info "已切换至: $CURRENT_INSTANCE"
+}
+
+# 修改 SillyTavern 端口
+function change_st_port() {
+    if [ ! -d "$ST_DIR" ]; then
+        print_error "当前实例未安装，无法修改端口。"
+        return
+    fi
+
+    local config_file="$ST_DIR/config.yaml"
+    
+    # 如果 config.yaml 不存在，先从示例创建或创建基础版
+    if [ ! -f "$config_file" ]; then
+        print_warn "未找到 config.yaml，正在初始化默认配置..."
+        if [ -f "$ST_DIR/config.yaml" ]; then
+            cp "$ST_DIR/config.yaml" "$config_file"
+        else
+            echo "port: 8000" > "$config_file"
+        fi
+    fi
+
+    local current_port
+    current_port=$(grep "^port:" "$config_file" | awk '{print $2}')
+    current_port=${current_port:-8000}
+
+    print_info "当前端口: $current_port"
+    read -p "请输入新端口 (例如 8001): " new_port
+    
+    if [[ ! "$new_port" =~ ^[0-9]+$ ]]; then
+        print_error "无效的端口号。"
+        return
+    fi
+
+    # 使用 sed 修改端口
+    if sed -i "s/^port: .*/port: $new_port/" "$config_file"; then
+        print_info "端口已修改为: $new_port"
+    else
+        print_error "修改失败。"
+    fi
+}
+
 # 检查并清理端口占用
 function check_port() {
     local port=8000
+    # 尝试从当前实例的 config.yaml 读端口
+    if [ -f "$ST_DIR/config.yaml" ]; then
+        local config_port
+        config_port=$(grep "^port:" "$ST_DIR/config.yaml" | awk '{print $2}')
+        if [[ "$config_port" =~ ^[0-9]+$ ]]; then
+            port=$config_port
+        fi
+    fi
+    
+    print_info "正在检查端口 $port 的占用情况..."
     # 检查端口是否被占用
     # 尝试多种方式获取 PID，以兼容不同环境
     local pids=""
@@ -1224,9 +1289,9 @@ function run_foxium() {
     print_info "正在下载 Foxium 工具箱..."
     print_info "Foxium 工具箱是来自橘狐宝宝的【酒馆多功能修复/优化/备份小工具】"
     cd "$HOME" || exit
-    if curl -O -s https://raw.githubusercontent.com/dz114879/ST-foxium/refs/heads/main/foxium.sh; then
+    if curl -L "https://raw.githubusercontent.com/dz114879/ST-foxium/refs/heads/main/build/ffss.sh" -o ffss.sh; then
         print_info "下载成功，正在启动..."
-        bash foxium.sh
+        bash ffss.sh
     else
         print_error "下载失败，请检查网络连接。"
         read -p "按回车键继续..."
@@ -1258,6 +1323,9 @@ function main_menu() {
         echo -e "${CYAN}====================================================${NC}"
         echo -e "${BOLD}${PURPLE} 🎣 钓鱼佬的工具箱 (Angler's Toolbox) ${NC} ${YELLOW}${SCRIPT_VERSION}${NC}"
         echo -e "${CYAN}====================================================${NC}"
+        echo -e "${BLUE} 当前操作实例: ${YELLOW}${CURRENT_INSTANCE}${NC}"
+        echo -e "${BLUE} 实例目录: ${CYAN}${ST_DIR}${NC}"
+        echo -e "${CYAN}----------------------------------------------------${NC}"
         echo -e "${BLUE} 作者: 10091009mc${NC}"
         echo -e "${BLUE} Foxium 工具箱 作者: FoX | 𝓚𝓚𝓣𝓼𝓝(橘狐)${NC}"
         echo -e "${RED} ⚠️  警告: 不要买任何贩子的模型API，都是骗人的！${NC}"
@@ -1270,19 +1338,20 @@ function main_menu() {
         
         echo -e "\n${BOLD}${BLUE}【 🛠️  维护与修复 】${NC}"
         echo -e " ${GREEN}5.${NC} 重装依赖 (Fix npm)     ${GREEN}6.${NC} 备份与恢复"
-        echo -e " ${GREEN}7.${NC} 端口检查与清理"
+        echo -e " ${GREEN}7.${NC} 端口检查与清理         ${GREEN}14.${NC} ${YELLOW}修改当前实例端口${NC}"
         
         echo -e "\n${BOLD}${BLUE}【 ⚙️  工具箱设置 】${NC}"
         echo -e " ${GREEN}8.${NC} 防杀后台保活         ${GREEN}9.${NC} 更新此脚本"
         echo -e " ${GREEN}10.${NC} 开机自启 [${AUTOSTART_STATUS}]    ${GREEN}11.${NC} 卸载管理"
         echo -e " ${GREEN}12.${NC} 运行 Foxium 工具箱  ${GREEN}13.${NC} 一键修复 hostWhitelist (安全)"
+        echo -e " ${GREEN}15.${NC} ${PURPLE}切换操作实例 (主程序/分身)${NC}"
         
         echo -e "\n${CYAN}----------------------------------------------------${NC}"
         echo -e "${YELLOW}提示: 若遇到脚本需退出两次才能关闭，请尝试先关闭再重新开启[开机自启]功能。${NC}"
         echo -e " ${GREEN}0.${NC} 退出脚本"
         echo -e "${CYAN}====================================================${NC}"
         
-        read -p " 请输入选项 [0-13]: " option
+        read -p " 请输入选项 [0-15]: " option
         
         case $option in
             1) start_st; read -p "按回车键继续..." ;;
@@ -1298,6 +1367,8 @@ function main_menu() {
             11) uninstall_menu; read -p "按回车键继续..." ;;
             12) run_foxium ;;
             13) fix_host_whitelist_security; read -p "按回车键继续..." ;;
+            14) change_st_port; read -p "按回车键继续..." ;;
+            15) toggle_instance; sleep 1 ;;
             0) exit 0 ;;
             *) print_error "无效选项"; read -p "按回车键继续..." ;;
         esac
